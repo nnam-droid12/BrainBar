@@ -1,0 +1,52 @@
+# Declarative shoot script for the Stage Simulator.
+# Must stay aligned with assets/shot-list/shot_list.csv and assets/script/scene.txt —
+# Continuity grounds "intended vs captured" against these same setups.
+
+scene: SC03
+scene_title: "Platform Standoff"
+int_ext: INT
+time_of_day: NIGHT
+location: "Subway Platform — LED Volume Stage B"
+
+setups:
+  - id: "1"
+    description: "Wide master — dolly push toward Mara as the train passes behind her"
+    lens_mm: 24
+    movement: "dolly push"
+    framing: "wide"
+    coverage_type: "master"
+    planned_takes: 1
+    cues:
+      - frame_number: 120
+        type: dolly
+      - frame_number: 200
+        type: pyro
+
+  - id: "2"
+    description: "Single on Mara — handheld push in as the train passes"
+    lens_mm: 50
+    movement: "handheld push"
+    framing: "close"
+    coverage_type: "single"
+    planned_takes: 1
+    cues:
+      - frame_number: 90
+        type: lighting
+
+  - id: "3"
+    description: "Reverse single on Deacon, static"
+    lens_mm: 50
+    movement: "static"
+    framing: "close"
+    coverage_type: "reverse"
+    planned_takes: 1
+    cues: []
+
+  - id: "4"
+    description: "Clean plate — wall only, no actors, for VFX paint-out"
+    lens_mm: 24
+    movement: "static"
+    framing: "wide"
+    coverage_type: "clean_plate"
+    planned_takes: 1
+    cues: []
