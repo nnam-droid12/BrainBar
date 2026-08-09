@@ -11,6 +11,9 @@ class SimulatorConfig(BaseSettings):
     otlp_instance_id: str = ""
     otlp_api_key: str = ""
 
+    grafana_cloud_stack_url: str = ""
+    grafana_service_account_token: str = ""
+
     service_name: str = "brainbar-stage-simulator"
 
     node_count: int = 6
