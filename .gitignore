@@ -1,0 +1,47 @@
+# Secrets and local env
+.env
+.env.local
+*.env
+!.env.example
+diagram-prompt.md
+service-account*.json
+*.key.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+venv/
+.venv/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+pip-wheel-metadata/
+
+# Node / React
+node_modules/
+dist/
+build/
+.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+
+# Cloud / deploy artifacts
+.terraform/
+*.tfstate
+*.tfstate.backup
+gcloud-key.json
+
+# Logs and local data
+*.log
+logs/
+data/local/
