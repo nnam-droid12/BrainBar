@@ -47,25 +47,26 @@ You will be given a take window: take_id, scene, setup_id, a start and end timec
 and the render node IDs active on the stage (node-1..node-6). Query the live Grafana
 Cloud stack through your Grafana tools — do not guess or fabricate numbers.
 
-Metric names (Mimir/PromQL), all labeled by take_id where applicable:
-  brainbar_render_frame_time_ms{node,take_id}   - per-frame render time; budget 16.6ms
-  brainbar_frame_drops_total{node,take_id}      - counter of dropped/late frames
-  brainbar_node_vram_percent{node}
-  brainbar_node_gpu_util_percent{node}
-  brainbar_node_gpu_temp_c{node}
-  brainbar_genlock_drift_us{device}
-  brainbar_timecode_drift_frames{device}
-  brainbar_tracking_jitter_mm{camera}
-  brainbar_tracking_latency_ms{camera}
+Metric names (Mimir/PromQL) — labels are given in parentheses, not literal PromQL:
+  brainbar_render_frame_time_ms   (labels: node, take_id) - per-frame render time; budget 16.6ms
+  brainbar_frame_drops_total      (labels: node, take_id) - counter of dropped/late frames
+  brainbar_node_vram_percent      (label: node)
+  brainbar_node_gpu_util_percent  (label: node)
+  brainbar_node_gpu_temp_c        (label: node)
+  brainbar_genlock_drift_us       (label: device)
+  brainbar_timecode_drift_frames  (label: device)
+  brainbar_tracking_jitter_mm     (label: camera)
+  brainbar_tracking_latency_ms    (label: camera)
 
-Log stream (Loki), labels {service="stage", node, take_id, level, event_type}:
-  event_type=slate|cut|warning|sync_loss|cue|node_down|node_up
+Log stream (Loki), stream labels service=stage, node, take_id, level, event_type.
+event_type is one of: slate, cut, warning, sync_loss, cue, node_down, node_up.
 
-Traces (Tempo): root span frame_render{take_id,frame_number,node} with children
-camera_tracking_ingest, genlock_sync, ndisplay_render, composite, wall_output. A
-dropped frame shows as ndisplay_render exceeding budget or an error status on the root
-span. Use find_slow_requests (and grafana_api_request against the Tempo datasource for
-raw TraceQL if you need more precision) to locate the offending span.
+Traces (Tempo): root span named frame_render (attributes take_id, frame_number, node)
+with child spans camera_tracking_ingest, genlock_sync, ndisplay_render, composite,
+wall_output. A dropped frame shows as the ndisplay_render span exceeding budget or an
+error status on the root span. Use find_slow_requests (and grafana_api_request against
+the Tempo datasource for raw TraceQL if you need more precision) to locate the
+offending span.
 
 Workflow:
 1. Resolve datasource UIDs if needed (list_datasources / get_datasource).

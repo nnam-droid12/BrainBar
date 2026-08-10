@@ -16,8 +16,13 @@ class AgentsConfig(BaseSettings):
     google_cloud_location: str = "us-central1"
     google_genai_use_vertexai: bool = True
 
-    gemini_pro_model: str = "gemini-3.1-pro"
-    gemini_flash_model: str = "gemini-3.5-flash"
+    # Verified live against this project's Vertex AI Model Garden (see
+    # scripts/list_vertex_models.md): gemini-2.5-pro / gemini-2.5-flash are GA on the
+    # us-central1 regional endpoint. gemini-3.1-pro-preview / gemini-3-flash-preview
+    # also resolve, but only via the "global" location and only as preview models —
+    # swap to those here (and set google_cloud_location=global) once they're GA.
+    gemini_pro_model: str = "gemini-2.5-pro"
+    gemini_flash_model: str = "gemini-2.5-flash"
 
     rag_corpus_display_name: str = "brainbar-production-assets"
     vector_search_index_endpoint: str = ""
