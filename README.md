@@ -31,7 +31,7 @@ A generated architecture diagram will be linked here once produced (see `diagram
 | Document AI | `agents/continuity/ingest.py` (script/call-sheet parsing) |
 | Memory Bank | `agents/supervisor/memory.py` |
 | Agent Engine | `deploy/agent-engine/` (hosted crew runtime) |
-| Cloud Run | `deploy/cloud-run/` (simulator, backend, cockpit, MCP service) |
+| Cloud Run | `deploy/cloud-run/` (simulator, backend, frontend, MCP service) |
 | Cloud Storage | `agents/dit/` (assets + dailies) |
 | BigQuery | `agents/dit/bigquery_sink.py` (per-take dailies rows) |
 | Secret Manager | `deploy/` (Grafana token, deployment secrets) |
@@ -55,7 +55,7 @@ A generated architecture diagram will be linked here once produced (see `diagram
 simulator/    Stage Simulator — emits real telemetry to Grafana Cloud (Section 7 of the spec)
 agents/       The five-agent ADK crew
 backend/      FastAPI orchestration + mock stage-control API
-cockpit/      React control-room UI (Production Wall + Crew Wall)
+frontend/     React control-room UI (Production Wall + Crew Wall)
 assets/       Synthetic script, shot list, storyboards, call sheet
 deploy/       Cloud Run + Agent Engine deployment configs
 architecture/ Architecture + telemetry schema docs
@@ -63,7 +63,7 @@ architecture/ Architecture + telemetry schema docs
 
 ## Local setup
 
-_Filled in as each service lands — see `simulator/README.md`, `agents/README.md`, `backend/README.md`, `cockpit/README.md` for per-service instructions once available._
+_Filled in as each service lands — see `simulator/README.md`, `agents/README.md`, `backend/README.md`, `frontend/README.md` for per-service instructions once available._
 
 1. Copy `.env.example` to `.env` and fill in your GCP project, Grafana Cloud stack URL, and Grafana service-account token.
 2. `gcloud auth application-default login` and `gcloud config set project <your-project>`.

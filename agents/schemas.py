@@ -1,7 +1,7 @@
 """Shared Pydantic contracts passed between the five agents.
 
 Every agent returns one of these instead of free-text, so the Supervisor can
-synthesize a verdict programmatically and the backend/cockpit can render it without
+synthesize a verdict programmatically and the backend/frontend can render it without
 re-parsing prose. Keep this module dependency-free (no ADK/Grafana/GCP imports) so any
 agent or the backend can import it cheaply.
 """
