@@ -25,6 +25,11 @@ class AgentsConfig(BaseSettings):
     gemini_flash_model: str = "gemini-2.5-flash"
 
     rag_corpus_display_name: str = "brainbar-production-assets"
+    # RAG Engine's Spanner-backed mode is allowlist-only in us-central1/us-east1/us-east4
+    # for new projects; europe-west4 runs the default (Basic/serverless) tier without
+    # that restriction. The corpus resource name is fully-qualified, so Gemini calls
+    # in google_cloud_location can reference a corpus that lives in a different region.
+    rag_corpus_location: str = "europe-west4"
     vector_search_index_endpoint: str = ""
 
     documentai_location: str = "us"
