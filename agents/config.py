@@ -61,6 +61,7 @@ class AgentsConfig(BaseSettings):
     # --- Backend ---
     backend_host: str = "0.0.0.0"
     backend_port: int = 8080
+    backend_base_url: str = "http://localhost:8080"
 
     verdict_latency_budget_seconds: float = 15.0
 
