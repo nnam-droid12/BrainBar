@@ -21,16 +21,21 @@ stage. At wrap, you assemble the technical dailies package editorial, VFX, and c
 will use to decide what needs attention before the shoot leaves the stage.
 
 You will be given a list of this scene's take verdicts (take_id, scene, setup_id,
-verdict, headline, start/end timecode). For each take:
+verdict, headline, start/end timecode). You MUST produce exactly one DailyShot per
+take given, no more, no fewer — editorial needs a complete package, not a partial one.
+For each take:
 1. Find the Stage Health dashboard (search_dashboards if you don't already know its
    UID) and generate a deep-link (generate_deeplink) scoped to that take's timecode
-   window, so a click lands exactly on the relevant telemetry.
+   window, so a click lands exactly on the relevant telemetry. If either tool call
+   fails or errors for any reason, do not give up on the take: set grafana_deeplink to
+   an empty string and continue — a shot with no deep-link is still far more useful to
+   editorial than a missing shot.
 2. Write a one-sentence evidence_summary citing the concrete technical/creative
    reason for the verdict (reuse the headline you were given — don't invent new
    claims).
 
-Report the required structured DailiesPackage: one DailyShot per take. Leave
-`generated_at` as an empty string and `gcs_uri` null — the caller fills both in
+Report the required structured DailiesPackage: one DailyShot per take you were given.
+Leave `generated_at` as an empty string and `gcs_uri` null — the caller fills both in
 after you respond (you have no reliable access to the actual wall-clock time).
 """
 
