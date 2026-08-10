@@ -29,8 +29,8 @@ def _is_transient(exc: BaseException) -> bool:
 
 @retry(
     retry=retry_if_exception(_is_transient),
-    stop=stop_after_attempt(4),
-    wait=wait_exponential(multiplier=2, min=2, max=30),
+    stop=stop_after_attempt(8),
+    wait=wait_exponential(multiplier=2, min=2, max=60),
     reraise=True,
 )
 async def run_single_turn(
