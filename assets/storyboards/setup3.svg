@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" width="640" height="360">
+  <rect width="640" height="360" fill="#1c1f26"/>
+  <rect x="0" y="260" width="640" height="100" fill="#2a2e37"/>
+  <circle cx="320" cy="170" r="70" fill="#5c7a9e"/>
+  <rect x="250" y="235" width="140" height="90" fill="#4c6a8e"/>
+  <path d="M 300 155 Q 320 168 340 155" stroke="#0d0f13" stroke-width="3" fill="none"/>
+  <text x="320" y="345" fill="#cfd3dc" font-size="14" text-anchor="middle" font-family="sans-serif">DEACON — CLOSE SINGLE (near-smile)</text>
+  <text x="16" y="24" fill="#f4f5f7" font-size="16" font-family="sans-serif" font-weight="bold">SC03 · SETUP 3 · REVERSE (DEACON)</text>
+  <text x="16" y="44" fill="#9aa0ad" font-size="12" font-family="sans-serif">50mm · close · static · no cues</text>
+</svg>
