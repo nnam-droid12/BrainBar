@@ -10,7 +10,12 @@ import sys
 from simulator.config import config
 from simulator.grafana_provisioning.alert_rules import CONTACT_POINT, build_alert_rules
 from simulator.grafana_provisioning.client import GrafanaProvisioningClient
-from simulator.grafana_provisioning.stage_health_dashboard import build_dashboard
+from simulator.grafana_provisioning.crew_health_dashboard import (
+    build_dashboard as build_crew_health_dashboard,
+)
+from simulator.grafana_provisioning.stage_health_dashboard import (
+    build_dashboard as build_stage_health_dashboard,
+)
 
 FOLDER_UID = "brainbar"
 FOLDER_TITLE = "BrainBar"
@@ -37,9 +42,15 @@ def main() -> None:
                     "check the stack was created with the default Cloud stack bundle."
                 )
 
-        dashboard = build_dashboard(uids["prometheus"], uids["loki"])
-        result = client.upsert_dashboard(dashboard, FOLDER_UID)
+        stage_dashboard = build_stage_health_dashboard(uids["prometheus"], uids["loki"])
+        result = client.upsert_dashboard(stage_dashboard, FOLDER_UID)
         print(f"Stage Health dashboard: {client.stack_url}{result['url']}")
+
+        crew_dashboard = build_crew_health_dashboard(
+            uids["prometheus"], config.verdict_latency_budget_seconds * 1000
+        )
+        result = client.upsert_dashboard(crew_dashboard, FOLDER_UID)
+        print(f"Crew Health dashboard: {client.stack_url}{result['url']}")
 
         client.ensure_contact_point(CONTACT_POINT)
         for rule in build_alert_rules(uids["prometheus"]):

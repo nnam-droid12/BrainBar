@@ -35,6 +35,10 @@ class SimulatorConfig(BaseSettings):
     # backend can react in near-real-time without polling Grafana. Best-effort, non-blocking.
     backend_webhook_url: str = ""
 
+    # Mirrors agents/config.py's setting of the same name — used only to draw the
+    # budget line on the provisioned Crew Health dashboard.
+    verdict_latency_budget_seconds: float = 15.0
+
     @property
     def otlp_headers(self) -> dict[str, str]:
         if not self.otlp_instance_id or not self.otlp_api_key:
