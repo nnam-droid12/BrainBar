@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from agents.schemas import ActionLog, DailiesPackage, TakeVerdict
+from agents.schemas import ActionLog, DailiesPackage, RoutingDecision, TakeVerdict
 
 
 @dataclass
@@ -19,6 +19,7 @@ class TakeRecord:
     end_timecode: str = "00:00:00:00"
     verdict: TakeVerdict | None = None
     action_log: ActionLog | None = None
+    routing: RoutingDecision | None = None
     rolling: bool = True
 
 
@@ -67,6 +68,10 @@ class ShootState:
         if take_id in self.takes:
             self.takes[take_id].action_log = action_log
 
+    def set_routing(self, take_id: str, routing: RoutingDecision) -> None:
+        if take_id in self.takes:
+            self.takes[take_id].routing = routing
+
     def set_dailies(self, dailies: DailiesPackage) -> None:
         self.dailies = dailies
 
@@ -84,6 +89,7 @@ class ShootState:
                     "rolling": r.rolling,
                     "verdict": r.verdict.model_dump(mode="json") if r.verdict else None,
                     "action_log": r.action_log.model_dump(mode="json") if r.action_log else None,
+                    "routing": r.routing.model_dump(mode="json") if r.routing else None,
                 }
                 for r in (self.takes[tid] for tid in self.take_order)
             ],

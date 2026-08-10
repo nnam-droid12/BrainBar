@@ -88,7 +88,7 @@ async def _on_cut(payload: dict) -> None:
 
     await manager.broadcast("cut", payload)
 
-    verdict = await handle_cut(
+    verdict, routing = await handle_cut(
         take_id=take_id,
         scene=scene,
         setup_id=str(setup_id),
@@ -100,7 +100,11 @@ async def _on_cut(payload: dict) -> None:
         fault_active=fault_active,
     )
     state.set_verdict(take_id, verdict, start_timecode=start_timecode, end_timecode=end_timecode)
+    state.set_routing(take_id, routing)
     await manager.broadcast("verdict", {"take_id": take_id, "verdict": verdict.model_dump(mode="json")})
+    await manager.broadcast(
+        "routing_decision", {"take_id": take_id, "routing": routing.model_dump(mode="json")}
+    )
 
     action_log = await act(
         verdict=verdict,

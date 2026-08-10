@@ -10,7 +10,7 @@ import time
 from agents.continuity.analyze import analyze_take as analyze_creative
 from agents.observability import record_verdict_latency
 from agents.runtime import parse_output, run_single_turn
-from agents.schemas import ModelTier, TakeVerdict
+from agents.schemas import ModelTier, RoutingDecision, TakeVerdict
 from agents.supervisor.agent import build_agent as build_supervisor_agent
 from agents.supervisor.memory import record_note
 from agents.supervisor.routing import decide_model_tier_observed
@@ -28,7 +28,7 @@ async def handle_cut(
     node_ids: list[str],
     coverage_type: str,
     fault_active: bool = False,
-) -> TakeVerdict:
+) -> tuple[TakeVerdict, RoutingDecision]:
     t0 = time.monotonic()
 
     routing = await decide_model_tier_observed(
@@ -82,7 +82,7 @@ async def handle_cut(
         take_id=take_id, scene=scene, setup_id=setup_id, latency_ms=latency_ms
     )
     await _record_memory(verdict)
-    return verdict
+    return verdict, routing
 
 
 async def _record_memory(verdict: TakeVerdict) -> None:
