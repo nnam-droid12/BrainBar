@@ -38,8 +38,10 @@ class AgentsConfig(BaseSettings):
     agent_engine_resource_name: str = ""
     memory_bank_agent_engine_id: str = ""
 
-    gcs_assets_bucket: str = "brainbar-assets"
-    gcs_dailies_bucket: str = "brainbar-dailies"
+    # Bucket names are globally unique across all of GCS — prefixed with the project
+    # id to avoid collisions with other projects' "brainbar-*" buckets.
+    gcs_assets_bucket: str = "nixora-project-brainbar-assets"
+    gcs_dailies_bucket: str = "nixora-project-brainbar-dailies"
 
     bigquery_dataset: str = "brainbar_dailies"
     bigquery_table: str = "takes"
