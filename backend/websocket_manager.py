@@ -1,4 +1,4 @@
-"""Broadcasts live events to every connected cockpit WebSocket client."""
+"""Broadcasts live events to every connected frontend WebSocket client."""
 from __future__ import annotations
 
 import logging

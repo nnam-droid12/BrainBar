@@ -15,6 +15,8 @@ class TakeRecord:
     scene: str
     setup_id: str
     take_number: int
+    start_timecode: str = "00:00:00:00"
+    end_timecode: str = "00:00:00:00"
     verdict: TakeVerdict | None = None
     action_log: ActionLog | None = None
     rolling: bool = True
@@ -41,7 +43,9 @@ class ShootState:
             take_id=take_id, scene=scene, setup_id=setup_id, take_number=take_number
         )
 
-    def set_verdict(self, take_id: str, verdict: TakeVerdict) -> None:
+    def set_verdict(
+        self, take_id: str, verdict: TakeVerdict, start_timecode: str = "", end_timecode: str = ""
+    ) -> None:
         record = self.takes.setdefault(
             take_id,
             TakeRecord(
@@ -53,6 +57,10 @@ class ShootState:
         )
         record.verdict = verdict
         record.rolling = False
+        if start_timecode:
+            record.start_timecode = start_timecode
+        if end_timecode:
+            record.end_timecode = end_timecode
         self.coverage_owed[verdict.scene] = verdict.creative.coverage_owed
 
     def set_action_log(self, take_id: str, action_log: ActionLog) -> None:
