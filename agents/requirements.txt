@@ -1,0 +1,17 @@
+google-adk==2.6.3
+google-genai==2.17.0
+google-cloud-aiplatform[adk,agent-engines]
+google-cloud-documentai
+google-cloud-storage
+google-cloud-bigquery
+google-cloud-secret-manager
+mcp>=1.24,<2
+pydantic==2.13.4
+pydantic-settings==2.7.1
+opentelemetry-api==1.42.1
+opentelemetry-sdk==1.42.1
+opentelemetry-exporter-otlp-proto-http==1.42.1
+fastapi==0.141.1
+uvicorn==0.52.1
+httpx==0.28.1
+PyYAML==6.0.3
