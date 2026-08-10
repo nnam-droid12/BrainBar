@@ -1,0 +1,5 @@
+scene,setup_id,description,lens_mm,movement,framing,coverage_type,planned_takes,notes
+SC03,1,"Wide master - dolly push toward Mara as the train passes behind her",24,dolly push,wide,master,1,"Train pass timed to dolly push at frame 120; pyro spark cue on platform grate at frame 200"
+SC03,2,"Single on Mara - handheld push in as the train passes",50,handheld push,close,single,1,"Practical lighting flicker cue at frame 90 keyed to train headlight sweep"
+SC03,3,"Reverse single on Deacon, static",50,static,close,reverse,1,"No cues; hold on Deacon's near-smile for the button"
+SC03,4,"Clean plate - wall only, no actors, for VFX paint-out",24,static,wide,clean_plate,1,"Required for VFX to paint out the missing-person poster continuity error if a later cut needs it removed"
