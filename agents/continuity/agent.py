@@ -7,13 +7,40 @@ to shot-list setups by timecode.
 """
 from __future__ import annotations
 
+import asyncio
+
+import vertexai
 from google.adk.agents import LlmAgent
-from google.adk.tools.retrieval import VertexAiRagRetrieval
+from vertexai import rag
 
 from agents.config import config
 from agents.continuity.rag_setup import ensure_corpus
 from agents.mcp_client import build_grafana_toolset
 from agents.schemas import CreativeVerdict, ModelTier
+
+# ADK's native VertexAiRagRetrieval tool asks Gemini 2+ models to use RAG as a
+# built-in "retrieval" tool alongside our function-declared Grafana MCP tools. That
+# mix is flagged by the SDK itself as incompatible with automatic function calling
+# and was intermittently rejected outright by the API (400 INVALID_ARGUMENT) when
+# both were attached to the same agent. A plain function tool wrapping
+# rag.retrieval_query keeps every tool on the same function-calling path — still a
+# real RAG Engine call, just not the native-tool shortcut.
+def _make_retrieval_tool(corpus_name: str):
+    vertexai.init(project=config.google_cloud_project, location=config.rag_corpus_location)
+
+    async def retrieve_production_documents(query: str) -> list[str]:
+        """Retrieves relevant passages from the script, shot list, storyboards, and
+        call sheet for the given query (e.g. "setup 1 intended framing and lens")."""
+        response = await asyncio.to_thread(
+            rag.retrieval_query,
+            text=query,
+            rag_resources=[rag.RagResource(rag_corpus=corpus_name)],
+            rag_retrieval_config=rag.RagRetrievalConfig(top_k=5),
+        )
+        return [context.text for context in response.contexts.contexts]
+
+    return retrieve_production_documents
+
 
 GRAFANA_TOOL_FILTER = [
     "query_loki_logs",
@@ -64,15 +91,7 @@ def build_agent(model_tier: ModelTier, corpus_name: str | None = None) -> LlmAge
         description="Grounds each take against the script/shot-list/storyboard and tracks coverage.",
         instruction=INSTRUCTION,
         tools=[
-            VertexAiRagRetrieval(
-                name="retrieve_production_documents",
-                description=(
-                    "Retrieves relevant passages from the script, shot list, "
-                    "storyboards, and call sheet for the current scene/setup."
-                ),
-                rag_corpora=[corpus_name],
-                similarity_top_k=5,
-            ),
+            _make_retrieval_tool(corpus_name),
             build_grafana_toolset(tool_filter=GRAFANA_TOOL_FILTER),
         ],
         output_schema=CreativeVerdict,

@@ -4,19 +4,35 @@ through this helper and gets back the structured Pydantic object it declared as 
 """
 from __future__ import annotations
 
+import uuid
 from typing import TypeVar
 
 from google.adk.agents import LlmAgent
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
+from google.genai.errors import ClientError
 from pydantic import BaseModel
+from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 _session_service = InMemorySessionService()
 
 T = TypeVar("T", bound=BaseModel)
 
 
+def _is_transient(exc: BaseException) -> bool:
+    # 429 RESOURCE_EXHAUSTED (quota) and 5xx are worth retrying; 400s are not.
+    return isinstance(exc, ClientError) and (
+        exc.code == 429 or (exc.code is not None and exc.code >= 500)
+    )
+
+
+@retry(
+    retry=retry_if_exception(_is_transient),
+    stop=stop_after_attempt(4),
+    wait=wait_exponential(multiplier=2, min=2, max=30),
+    reraise=True,
+)
 async def run_single_turn(
     agent: LlmAgent,
     prompt: str,
@@ -32,15 +48,14 @@ async def run_single_turn(
     way (see llm_agent.py: "output_schema and tools together ... enforcing structure
     only on the final output"). The caller parses `raw_text` with the same Pydantic
     model it passed as `output_schema`.
+
+    Each call gets a fresh session by default (a new uuid) — callers doing many
+    independent per-take analyses should never share a session_id, or each new take's
+    prompt gets appended to the prior take's conversation history instead of starting
+    clean. Pass an explicit session_id only when multi-turn continuity is intended.
     """
-    session_id = session_id or f"{app_name}-session"
-    session = await _session_service.get_session(
-        app_name=app_name, user_id=user_id, session_id=session_id
-    )
-    if session is None:
-        await _session_service.create_session(
-            app_name=app_name, user_id=user_id, session_id=session_id
-        )
+    session_id = session_id or f"{app_name}-{uuid.uuid4().hex}"
+    await _session_service.create_session(app_name=app_name, user_id=user_id, session_id=session_id)
 
     runner = Runner(app_name=app_name, agent=agent, session_service=_session_service)
 
