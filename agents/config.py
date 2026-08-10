@@ -27,6 +27,9 @@ class AgentsConfig(BaseSettings):
     rag_corpus_display_name: str = "brainbar-production-assets"
     vector_search_index_endpoint: str = ""
 
+    documentai_location: str = "us"
+    documentai_ocr_processor_display_name: str = "brainbar-ocr"
+
     agent_engine_resource_name: str = ""
     memory_bank_agent_engine_id: str = ""
 
