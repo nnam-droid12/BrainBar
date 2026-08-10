@@ -15,6 +15,10 @@ from google.genai.errors import ClientError
 from pydantic import BaseModel
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
+from agents.observability import init_observability
+
+init_observability()
+
 _session_service = InMemorySessionService()
 
 T = TypeVar("T", bound=BaseModel)

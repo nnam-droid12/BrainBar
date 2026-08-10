@@ -8,11 +8,12 @@ import asyncio
 import time
 
 from agents.continuity.analyze import analyze_take as analyze_creative
+from agents.observability import record_verdict_latency
 from agents.runtime import parse_output, run_single_turn
 from agents.schemas import ModelTier, TakeVerdict
 from agents.supervisor.agent import build_agent as build_supervisor_agent
 from agents.supervisor.memory import record_note
-from agents.supervisor.routing import decide_model_tier
+from agents.supervisor.routing import decide_model_tier_observed
 from agents.technical_director.analyze import analyze_take as analyze_technical
 
 
@@ -30,7 +31,9 @@ async def handle_cut(
 ) -> TakeVerdict:
     t0 = time.monotonic()
 
-    routing = decide_model_tier(take_id=take_id, coverage_type=coverage_type, fault_active=fault_active)
+    routing = await decide_model_tier_observed(
+        take_id=take_id, coverage_type=coverage_type, fault_active=fault_active
+    )
 
     technical, creative = await asyncio.gather(
         analyze_technical(
@@ -75,6 +78,9 @@ async def handle_cut(
         }
     )
 
+    record_verdict_latency(
+        take_id=take_id, scene=scene, setup_id=setup_id, latency_ms=latency_ms
+    )
     await _record_memory(verdict)
     return verdict
 
