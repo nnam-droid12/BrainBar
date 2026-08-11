@@ -5,6 +5,7 @@ result to every connected frontend.
 """
 from __future__ import annotations
 
+import asyncio
 import csv
 import logging
 from pathlib import Path
@@ -35,6 +36,10 @@ _COVERAGE_TYPES = _load_coverage_types()
 _fault_armed_by_take: dict[str, str | None] = {}
 _node_down_by_take: dict[str, str | None] = {}
 
+# Keeps strong references to in-flight background pipeline tasks so they aren't
+# garbage-collected mid-run (see asyncio docs on create_task); pruned on completion.
+_background_tasks: set[asyncio.Task] = set()
+
 
 @router.post("/grafana-webhook")
 async def grafana_webhook(payload: dict) -> dict:
@@ -51,12 +56,27 @@ async def simulator_event(payload: dict) -> dict:
     if event == "slate":
         await _on_slate(payload)
     elif event == "cut":
-        await _on_cut(payload)
+        # Fire-and-forget: _on_cut runs the full multi-agent pipeline (multiple
+        # Gemini calls, can take well over a minute). Awaiting it here would block
+        # this HTTP response until the pipeline finished, which the Simulator's
+        # webhook caller has no reason to wait on and no timeout budget for — it
+        # only needs an ack that the event was received. Task runs on the same
+        # event loop, so in-memory state and WebSocket broadcasts stay consistent.
+        task = asyncio.create_task(_run_cut_pipeline(payload))
+        _background_tasks.add(task)
+        task.add_done_callback(_background_tasks.discard)
     elif event == "node_down":
         await _on_node_down(payload)
     else:
         _log.warning("unknown simulator event: %s", event)
     return {"status": "ok"}
+
+
+async def _run_cut_pipeline(payload: dict) -> None:
+    try:
+        await _on_cut(payload)
+    except Exception:
+        _log.exception("cut pipeline failed for take_id=%s", payload.get("take_id"))
 
 
 async def _on_slate(payload: dict) -> None:
