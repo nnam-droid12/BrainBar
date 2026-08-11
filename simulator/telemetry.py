@@ -35,6 +35,7 @@ class StageTelemetry:
 
     def __init__(self) -> None:
         resource = Resource.create({"service.name": config.service_name})
+        self._resource = resource
         headers = config.otlp_headers
 
         tracer_provider = TracerProvider(resource=resource)
@@ -69,28 +70,23 @@ class StageTelemetry:
         set_logger_provider(logger_provider)
         self.logger = logger_provider.get_logger("brainbar.simulator")
 
-        self._frame_time_ms = self.meter.create_gauge(
-            "brainbar_render_frame_time_ms", unit="ms"
-        )
+        # NOTE: deliberately no `unit=` kwarg on any instrument below. Grafana Cloud's
+        # OTLP-to-Prometheus translation appends a unit suffix to the metric name
+        # (ms -> _milliseconds, us -> _microseconds, Hz -> _hertz, C -> _C) when a unit
+        # is set, which silently breaks every PromQL query written against the exact
+        # names in architecture/telemetry-schema.md. Omitting units keeps metric names
+        # byte-for-byte stable across dashboards, alert rules, and the Technical
+        # Director's instructions.
+        self._frame_time_ms = self.meter.create_gauge("brainbar_render_frame_time_ms")
         self._frame_drops_total = self.meter.create_counter("brainbar_frame_drops_total")
-        self._vram_percent = self.meter.create_gauge("brainbar_node_vram_percent", unit="%")
-        self._gpu_util_percent = self.meter.create_gauge(
-            "brainbar_node_gpu_util_percent", unit="%"
-        )
-        self._gpu_temp_c = self.meter.create_gauge("brainbar_node_gpu_temp_c", unit="C")
-        self._genlock_drift_us = self.meter.create_gauge(
-            "brainbar_genlock_drift_us", unit="us"
-        )
-        self._timecode_drift_frames = self.meter.create_gauge(
-            "brainbar_timecode_drift_frames"
-        )
-        self._wall_refresh_hz = self.meter.create_gauge("brainbar_wall_refresh_hz", unit="Hz")
-        self._tracking_jitter_mm = self.meter.create_gauge(
-            "brainbar_tracking_jitter_mm", unit="mm"
-        )
-        self._tracking_latency_ms = self.meter.create_gauge(
-            "brainbar_tracking_latency_ms", unit="ms"
-        )
+        self._vram_percent = self.meter.create_gauge("brainbar_node_vram_percent")
+        self._gpu_util_percent = self.meter.create_gauge("brainbar_node_gpu_util_percent")
+        self._gpu_temp_c = self.meter.create_gauge("brainbar_node_gpu_temp_c")
+        self._genlock_drift_us = self.meter.create_gauge("brainbar_genlock_drift_us")
+        self._timecode_drift_frames = self.meter.create_gauge("brainbar_timecode_drift_frames")
+        self._wall_refresh_hz = self.meter.create_gauge("brainbar_wall_refresh_hz")
+        self._tracking_jitter_mm = self.meter.create_gauge("brainbar_tracking_jitter_mm")
+        self._tracking_latency_ms = self.meter.create_gauge("brainbar_tracking_latency_ms")
         self._take_active = self.meter.create_gauge("brainbar_take_active")
 
         self.shutdown_hooks = [tracer_provider.shutdown, logger_provider.shutdown]
@@ -144,6 +140,16 @@ class StageTelemetry:
         self.logger.emit(
             LogRecord(
                 timestamp=time.time_ns(),
+                # This exporter version's protobuf encoder calls trace/span id
+                # .to_bytes() unconditionally and crashes on the None default —
+                # 0 is the valid OTel "no span" sentinel.
+                trace_id=0,
+                span_id=0,
+                trace_flags=trace.TraceFlags(0),
+                # Logger.emit() does not attach the provider's resource to a LogRecord
+                # that lacks one — without this, Grafana Cloud's OTLP receiver has no
+                # service.name to key off and buckets every log under "unknown_service".
+                resource=self._resource,
                 severity_number=severity,
                 severity_text=level.upper(),
                 body=message,

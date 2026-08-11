@@ -25,16 +25,34 @@ class GrafanaProvisioningClient:
             timeout=30.0,
         )
 
+    # Grafana Cloud stacks provision several datasources of the same underlying type
+    # for special purposes alongside the general-purpose one — e.g. a `loki`-typed
+    # datasource each for alert state history, usage insights, *and* actual application
+    # logs. Picking "the first" of a type is wrong; these name fragments identify the
+    # special-purpose ones so they can be skipped in favor of the general datasource.
+    _SPECIAL_PURPOSE_NAME_HINTS = (
+        "alert-state-history",
+        "usage",  # matches both the loki "usage-insights" and prometheus "usage" datasources
+        "cardinality-management",
+    )
+
     def get_datasource_uids(self) -> dict[str, str]:
         """Returns {'prometheus': uid, 'loki': uid, 'tempo': uid} for the stack's
-        built-in Grafana Cloud datasources (there is exactly one of each per stack)."""
+        general-purpose built-in Grafana Cloud datasources, skipping special-purpose
+        ones (alert state history, usage insights, etc.) that share the same type."""
         resp = self._client.get("/api/datasources")
         resp.raise_for_status()
         uids: dict[str, str] = {}
         for ds in resp.json():
             ds_type = ds.get("type")
-            if ds_type in ("prometheus", "loki", "tempo") and ds_type not in uids:
-                uids[ds_type] = ds["uid"]
+            name = ds.get("name", "")
+            if ds_type not in ("prometheus", "loki", "tempo"):
+                continue
+            if any(hint in name for hint in self._SPECIAL_PURPOSE_NAME_HINTS):
+                continue
+            if ds_type in uids and ds["uid"] != uids[ds_type]:
+                continue  # keep the first general-purpose match if more than one remains
+            uids[ds_type] = ds["uid"]
         return uids
 
     def ensure_folder(self, title: str, uid: str) -> str:

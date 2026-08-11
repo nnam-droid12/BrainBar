@@ -83,8 +83,10 @@ routing_decisions_total = _meter.create_counter(
 )
 
 verdict_latency_ms = _meter.create_histogram(
+    # Deliberately no unit= — see simulator/telemetry.py for why: Grafana Cloud's
+    # OTLP-to-Prometheus translation appends a unit suffix to the metric name when one
+    # is set, which would silently break every PromQL query written against this name.
     "brainbar_crew_verdict_latency_ms",
-    unit="ms",
     description="Total wall-clock time from cut to synthesized TakeVerdict.",
 )
 
