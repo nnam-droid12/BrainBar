@@ -18,14 +18,27 @@ _log = logging.getLogger(__name__)
 
 
 def _notify_backend(event: str, payload: dict) -> None:
+    """Best-effort but retried: a dropped "cut" notification leaves the backend
+    thinking the take is still rolling forever (nothing else ever tells it the take
+    ended), so a single 2s attempt with no retry was silently losing takes in
+    deployment whenever the backend was mid cold-start. Three attempts with a longer
+    per-attempt timeout comfortably covers a Cloud Run cold start (~5-10s)."""
     if not config.backend_webhook_url:
         return
-    try:
-        httpx.post(
-            config.backend_webhook_url, json={"event": event, **payload}, timeout=2.0
-        )
-    except httpx.HTTPError:
-        _log.warning("backend webhook unreachable for event=%s", event)
+    for attempt in range(3):
+        try:
+            resp = httpx.post(
+                config.backend_webhook_url, json={"event": event, **payload}, timeout=15.0
+            )
+            resp.raise_for_status()
+            return
+        except httpx.HTTPError:
+            if attempt == 2:
+                _log.warning(
+                    "backend webhook unreachable for event=%s after 3 attempts", event
+                )
+            else:
+                time.sleep(2.0 * (attempt + 1))
 
 
 class TakeRunner:
