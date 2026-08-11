@@ -1,0 +1,11 @@
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - deploy/cloud-run/backend/Dockerfile
+      - -t
+      - us-central1-docker.pkg.dev/$PROJECT_ID/brainbar/backend
+      - .
+images:
+  - us-central1-docker.pkg.dev/$PROJECT_ID/brainbar/backend
