@@ -78,5 +78,10 @@ class TakeState:
     rolling: bool = False
     start_timecode: str = ""
     end_timecode: str = ""
+    # SMPTE timecodes above are relative to take start and correlate slate/cut/cue log
+    # lines to a frame number; they are not usable as Grafana query time bounds. These
+    # are the real wall-clock bounds agents need to scope PromQL/LogQL/Tempo queries.
+    start_time_utc: str = ""
+    end_time_utc: str = ""
     fault: str | None = None
     node_offline: set[str] = field(default_factory=set)

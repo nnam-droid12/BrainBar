@@ -11,13 +11,17 @@ async def act(
     verdict: TakeVerdict,
     start_timecode: str,
     end_timecode: str,
+    start_time_utc: str,
+    end_time_utc: str,
     node_down: str | None = None,
     model_tier: ModelTier = ModelTier.FLASH,
 ) -> ActionLog:
     agent = build_agent(model_tier)
     prompt = (
         f"Take {verdict.take_id} (scene {verdict.scene}, setup {verdict.setup_id}, "
-        f"take {verdict.take_number}), timecode {start_timecode} to {end_timecode}.\n\n"
+        f"take {verdict.take_number}), timecode {start_timecode} to {end_timecode} "
+        f"(real time: {start_time_utc} to {end_time_utc} — use these as the actual "
+        f"time range for any dashboard annotation or deep-link you create).\n\n"
         f"Verdict: {verdict.verdict.value}\n"
         f"Headline: {verdict.headline}\n"
         f"Reasoning: {verdict.reasoning}\n"

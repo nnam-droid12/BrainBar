@@ -13,13 +13,18 @@ async def analyze_take(
     setup_id: str,
     start_timecode: str,
     end_timecode: str,
+    start_time_utc: str,
+    end_time_utc: str,
     node_ids: list[str],
     model_tier: ModelTier = ModelTier.FLASH,
 ) -> TechnicalVerdict:
     agent = build_agent(model_tier)
     prompt = (
         f"Analyze take {take_id} (scene {scene}, setup {setup_id}). "
-        f"Take window: timecode {start_timecode} to {end_timecode}. "
+        f"Take window: timecode {start_timecode} to {end_timecode} "
+        f"(real time: {start_time_utc} to {end_time_utc} — use these as the actual "
+        f"start/end bounds for every Grafana time-range query; the timecodes are only "
+        f"for correlating with slate/cut/cue log lines). "
         f"Active render nodes: {', '.join(node_ids)}. "
         "Query Grafana for this take's telemetry and report a TechnicalVerdict."
     )

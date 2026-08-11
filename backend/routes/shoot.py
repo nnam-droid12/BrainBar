@@ -59,6 +59,8 @@ async def wrap_shoot() -> dict:
             "take_id": r.take_id,
             "start_timecode": r.start_timecode,
             "end_timecode": r.end_timecode,
+            "start_time_utc": r.start_time_utc,
+            "end_time_utc": r.end_time_utc,
         }
         for r in records
     ]

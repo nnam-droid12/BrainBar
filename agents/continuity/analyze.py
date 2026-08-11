@@ -13,12 +13,16 @@ async def analyze_take(
     setup_id: str,
     start_timecode: str,
     end_timecode: str,
+    start_time_utc: str,
+    end_time_utc: str,
     model_tier: ModelTier = ModelTier.FLASH,
 ) -> CreativeVerdict:
     agent = build_agent(model_tier)
     prompt = (
         f"Take {take_id} just cut. Scene {scene}, setup {setup_id}, "
-        f"timecode {start_timecode} to {end_timecode}. "
+        f"timecode {start_timecode} to {end_timecode} "
+        f"(real time: {start_time_utc} to {end_time_utc} — use these as the actual "
+        f"query bounds if you query Loki). "
         "Retrieve this setup's intended framing/lens/movement/coverage from the "
         "production documents and report a CreativeVerdict."
     )

@@ -17,6 +17,8 @@ class TakeRecord:
     take_number: int
     start_timecode: str = "00:00:00:00"
     end_timecode: str = "00:00:00:00"
+    start_time_utc: str = ""
+    end_time_utc: str = ""
     verdict: TakeVerdict | None = None
     action_log: ActionLog | None = None
     routing: RoutingDecision | None = None
@@ -45,7 +47,13 @@ class ShootState:
         )
 
     def set_verdict(
-        self, take_id: str, verdict: TakeVerdict, start_timecode: str = "", end_timecode: str = ""
+        self,
+        take_id: str,
+        verdict: TakeVerdict,
+        start_timecode: str = "",
+        end_timecode: str = "",
+        start_time_utc: str = "",
+        end_time_utc: str = "",
     ) -> None:
         record = self.takes.setdefault(
             take_id,
@@ -62,6 +70,10 @@ class ShootState:
             record.start_timecode = start_timecode
         if end_timecode:
             record.end_timecode = end_timecode
+        if start_time_utc:
+            record.start_time_utc = start_time_utc
+        if end_time_utc:
+            record.end_time_utc = end_time_utc
         self.coverage_owed[verdict.scene] = verdict.creative.coverage_owed
 
     def set_action_log(self, take_id: str, action_log: ActionLog) -> None:
@@ -86,6 +98,10 @@ class ShootState:
                     "scene": r.scene,
                     "setup_id": r.setup_id,
                     "take_number": r.take_number,
+                    "start_timecode": r.start_timecode,
+                    "end_timecode": r.end_timecode,
+                    "start_time_utc": r.start_time_utc,
+                    "end_time_utc": r.end_time_utc,
                     "rolling": r.rolling,
                     "verdict": r.verdict.model_dump(mode="json") if r.verdict else None,
                     "action_log": r.action_log.model_dump(mode="json") if r.action_log else None,

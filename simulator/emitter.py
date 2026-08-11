@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import time
+from datetime import datetime, timezone
 
 import httpx
 
@@ -59,6 +60,7 @@ class TakeRunner:
 
         take.rolling = True
         take.start_timecode = frames_to_timecode(0, config.camera_fps)
+        take.start_time_utc = datetime.now(timezone.utc).isoformat()
         self.telemetry.log_event(
             "slate",
             f"SLATE — {self.shoot.scene} setup {setup_id} take {take_number}",
@@ -78,6 +80,7 @@ class TakeRunner:
                 "setup": setup_id,
                 "take": take_number,
                 "fault_armed": str(self.faults.active_fault) if self.faults.active_fault else None,
+                "start_time_utc": take.start_time_utc,
             },
         )
 
@@ -93,6 +96,7 @@ class TakeRunner:
 
         take.rolling = False
         take.end_timecode = frames_to_timecode(take.frame_number, config.camera_fps)
+        take.end_time_utc = datetime.now(timezone.utc).isoformat()
         self.telemetry.log_event(
             "cut",
             f"CUT — {self.shoot.scene} setup {setup_id} take {take_number}",
@@ -110,6 +114,8 @@ class TakeRunner:
                 "take": take_number,
                 "start_timecode": take.start_timecode,
                 "end_timecode": take.end_timecode,
+                "start_time_utc": take.start_time_utc,
+                "end_time_utc": take.end_time_utc,
             },
         )
         self.faults.clear()

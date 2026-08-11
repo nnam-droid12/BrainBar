@@ -23,7 +23,9 @@ async def compile_dailies(
     agent = build_agent(model_tier)
     verdict_lines = "\n".join(
         f"- {v.take_id}: verdict={v.verdict.value}, setup={v.setup_id}, "
-        f"headline={v.headline!r}, timecode={t['start_timecode']}-{t['end_timecode']}"
+        f"headline={v.headline!r}, timecode={t['start_timecode']}-{t['end_timecode']}, "
+        f"real_time={t['start_time_utc']} to {t['end_time_utc']} (use this as the "
+        "deep-link's actual time range)"
         for v, t in zip(verdicts, takes)
     )
     prompt = f"Scene {scene} wrapped. Takes this scene:\n{verdict_lines}\n\nCompile the DailiesPackage."

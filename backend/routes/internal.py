@@ -81,6 +81,8 @@ async def _on_cut(payload: dict) -> None:
     take_number = payload["take"]
     start_timecode = payload["start_timecode"]
     end_timecode = payload["end_timecode"]
+    start_time_utc = payload["start_time_utc"]
+    end_time_utc = payload["end_time_utc"]
 
     fault_active = bool(_fault_armed_by_take.get(take_id))
     node_down = _node_down_by_take.get(take_id)
@@ -95,11 +97,20 @@ async def _on_cut(payload: dict) -> None:
         take_number=take_number,
         start_timecode=start_timecode,
         end_timecode=end_timecode,
+        start_time_utc=start_time_utc,
+        end_time_utc=end_time_utc,
         node_ids=NODE_IDS,
         coverage_type=coverage_type,
         fault_active=fault_active,
     )
-    state.set_verdict(take_id, verdict, start_timecode=start_timecode, end_timecode=end_timecode)
+    state.set_verdict(
+        take_id,
+        verdict,
+        start_timecode=start_timecode,
+        end_timecode=end_timecode,
+        start_time_utc=start_time_utc,
+        end_time_utc=end_time_utc,
+    )
     state.set_routing(take_id, routing)
     await manager.broadcast("verdict", {"take_id": take_id, "verdict": verdict.model_dump(mode="json")})
     await manager.broadcast(
@@ -110,6 +121,8 @@ async def _on_cut(payload: dict) -> None:
         verdict=verdict,
         start_timecode=start_timecode,
         end_timecode=end_timecode,
+        start_time_utc=start_time_utc,
+        end_time_utc=end_time_utc,
         node_down=node_down,
     )
     state.set_action_log(take_id, action_log)
