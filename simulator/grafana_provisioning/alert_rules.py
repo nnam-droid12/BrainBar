@@ -84,16 +84,16 @@ def build_alert_rules(prom_uid: str) -> list[dict]:
     ]
 
 
+# Shape required by POST /api/v1/provisioning/contact-points: a single embedded
+# contact point, not the nested {"receivers": [...]} shape used by the legacy
+# Alertmanager config API.
 CONTACT_POINT = {
+    "uid": "brainbar-first-ad-webhook",
     "name": "brainbar-first-ad",
-    "receivers": [
-        {
-            "uid": "brainbar-first-ad-webhook",
-            "type": "webhook",
-            "settings": {
-                "url": "http://backend:8080/internal/grafana-webhook",
-                "httpMethod": "POST",
-            },
-        }
-    ],
+    "type": "webhook",
+    "settings": {
+        "url": "http://backend:8080/internal/grafana-webhook",
+        "httpMethod": "POST",
+    },
+    "disableResolveMessage": False,
 }
