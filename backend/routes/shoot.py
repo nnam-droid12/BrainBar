@@ -25,7 +25,9 @@ class StartShootRequest(BaseModel):
 async def start_shoot(req: StartShootRequest) -> dict:
     url = f"{config.simulator_base_url}/control/take/start"
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
+        # Generous timeout: the simulator's Cloud Run instance may need a cold start
+        # (min-instances=0 by default) before it can accept the request.
+        async with httpx.AsyncClient(timeout=20.0) as client:
             resp = await client.post(url, json={"setup_id": req.setup_id})
             resp.raise_for_status()
             return resp.json()
@@ -37,7 +39,9 @@ async def start_shoot(req: StartShootRequest) -> dict:
 async def stop_shoot() -> dict:
     url = f"{config.simulator_base_url}/control/take/stop"
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
+        # Generous timeout: the simulator's Cloud Run instance may need a cold start
+        # (min-instances=0 by default) before it can accept the request.
+        async with httpx.AsyncClient(timeout=20.0) as client:
             resp = await client.post(url)
             resp.raise_for_status()
             return resp.json()
@@ -80,7 +84,9 @@ async def wrap_shoot() -> dict:
 async def shoot_status() -> dict:
     url = f"{config.simulator_base_url}/control/status"
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
+        # Generous timeout: the simulator's Cloud Run instance may need a cold start
+        # (min-instances=0 by default) before it can accept the request.
+        async with httpx.AsyncClient(timeout=20.0) as client:
             resp = await client.get(url)
             resp.raise_for_status()
             return resp.json()
