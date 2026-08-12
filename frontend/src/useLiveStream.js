@@ -86,6 +86,10 @@ function reducer(state, action) {
       const p = action.payload
       return upsertTake(state, p.take_id, { action_log: p.action_log })
     }
+    case 'verdict_error': {
+      const p = action.payload
+      return upsertTake(state, p.take_id, { error: p.error, rolling: false })
+    }
     case 'node_down': {
       const p = action.payload
       return {

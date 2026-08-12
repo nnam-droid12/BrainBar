@@ -23,12 +23,26 @@ export default function VerdictCard({ take }) {
             {take.start_timecode || '--:--:--:--'} &rarr; {take.end_timecode || '--:--:--:--'}
           </div>
         </div>
-        <VerdictBadge verdict={take.verdict} rolling={rolling} size="lg" />
+        <VerdictBadge verdict={take.verdict} rolling={rolling} error={take.error} size="lg" />
       </div>
 
       {rolling && <p className="verdict-card-rolling">● ROLLING</p>}
 
-      {!rolling && !take.verdict && (
+      {!rolling && !take.verdict && take.error && (
+        <div className="verdict-card-analyzing verdict-card-error">
+          <p className="verdict-card-error-pulse">✕ Analysis failed</p>
+          <p className="muted small">
+            {take.error}
+          </p>
+          <p className="muted small">
+            This is almost always a Vertex AI rate limit from heavy testing volume, not
+            a broken take — roll this setup again from the demo controls to retry, or
+            wait a minute for quota to recover.
+          </p>
+        </div>
+      )}
+
+      {!rolling && !take.verdict && !take.error && (
         <div className="verdict-card-analyzing">
           <p className="verdict-card-analyzing-pulse">● Crew is analyzing this take…</p>
           <p className="muted small">

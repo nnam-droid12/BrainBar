@@ -18,7 +18,7 @@ export default function TakeTimeline({ takes, takesById, selectedId, onSelect })
               <span className="take-row-id">
                 {t.scene} · S{t.setup_id} · T{t.take_number}
               </span>
-              <VerdictBadge verdict={t.verdict} rolling={t.rolling} size="sm" />
+              <VerdictBadge verdict={t.verdict} rolling={t.rolling} error={t.error} size="sm" />
             </li>
           )
         })}

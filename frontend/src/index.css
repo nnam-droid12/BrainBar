@@ -270,6 +270,11 @@ main {
   border-color: var(--accent);
   animation: pulse 1.6s ease-in-out infinite;
 }
+.badge-error {
+  background: rgba(185, 28, 28, 0.1);
+  color: var(--red);
+  border-color: var(--red);
+}
 
 /* --- verdict card ------------------------------------------------------- */
 
@@ -332,6 +337,19 @@ main {
   font-size: 0.85rem;
   margin: 0 0 0.4rem;
   animation: pulse 1.6s ease-in-out infinite;
+}
+.verdict-card-error {
+  border-color: var(--red);
+}
+.verdict-card-error-pulse {
+  color: var(--red);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  margin: 0 0 0.4rem;
+}
+.verdict-card-error .muted.small:first-of-type {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
 }
 .verdict-card-headline {
   font-size: 1.15rem;

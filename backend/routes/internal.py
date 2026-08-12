@@ -73,10 +73,17 @@ async def simulator_event(payload: dict) -> dict:
 
 
 async def _run_cut_pipeline(payload: dict) -> None:
+    take_id = payload.get("take_id", "")
     try:
         await _on_cut(payload)
-    except Exception:
-        _log.exception("cut pipeline failed for take_id=%s", payload.get("take_id"))
+    except Exception as exc:
+        _log.exception("cut pipeline failed for take_id=%s", take_id)
+        # Without this the take sits at rolling=false/verdict=None forever — the
+        # frontend has no way to tell "still analyzing" from "will never finish"
+        # (this happens for real: sustained Vertex AI 429s can exhaust every retry).
+        message = f"{type(exc).__name__}: {exc}"[:300]
+        state.set_error(take_id, message)
+        await manager.broadcast("verdict_error", {"take_id": take_id, "error": message})
 
 
 async def _on_slate(payload: dict) -> None:

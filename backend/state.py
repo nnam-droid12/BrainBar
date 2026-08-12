@@ -23,6 +23,7 @@ class TakeRecord:
     action_log: ActionLog | None = None
     routing: RoutingDecision | None = None
     rolling: bool = True
+    error: str | None = None
 
 
 @dataclass
@@ -76,6 +77,16 @@ class ShootState:
             record.end_time_utc = end_time_utc
         self.coverage_owed[verdict.scene] = verdict.creative.coverage_owed
 
+    def set_error(self, take_id: str, message: str) -> None:
+        """Marks a take's pipeline as terminally failed (e.g. Vertex AI quota
+        exhausted every retry) so it stops looking like it's still being analyzed —
+        without this, a failed take sits at rolling=false/verdict=None forever, which
+        the frontend can't distinguish from "still processing"."""
+        if take_id in self.takes:
+            record = self.takes[take_id]
+            record.error = message
+            record.rolling = False
+
     def set_action_log(self, take_id: str, action_log: ActionLog) -> None:
         if take_id in self.takes:
             self.takes[take_id].action_log = action_log
@@ -103,6 +114,7 @@ class ShootState:
                     "start_time_utc": r.start_time_utc,
                     "end_time_utc": r.end_time_utc,
                     "rolling": r.rolling,
+                    "error": r.error,
                     "verdict": r.verdict.model_dump(mode="json") if r.verdict else None,
                     "action_log": r.action_log.model_dump(mode="json") if r.action_log else None,
                     "routing": r.routing.model_dump(mode="json") if r.routing else None,
