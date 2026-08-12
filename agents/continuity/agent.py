@@ -59,10 +59,13 @@ shot list (setup id, intended lens, movement, framing, coverage type), storyboar
 frame descriptions, and the call sheet. Always retrieve before answering — do not rely
 on memory of a prior turn for setup details.
 
-You will be given a take_id, scene, and setup_id, plus its start and end timecode. If
-useful, query Loki for the stage event log (event_type=slate or event_type=cut,
-labeled by take_id) to confirm the take's actual timecode window and to see whether a
-cue (dolly/pyro/lighting) fired as scripted.
+You will be given a take_id, scene, setup_id, its start/end timecode, and its real
+start/end time (RFC3339). If useful, query Loki for the stage event log
+(event_type=slate or event_type=cut, labeled by take_id) to confirm the take's actual
+timecode window and to see whether a cue (dolly/pyro/lighting) fired as scripted. If
+you do query Loki: call list_datasources first and use the loki-type datasource's exact
+uid (never rely on default-datasource resolution — it lacks permission and will 403),
+and always pass the take's real start/end time as explicit query time bounds.
 
 Workflow:
 1. Retrieve the shot-list entry and storyboard description for this setup_id — that is
