@@ -1,0 +1,21 @@
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - deploy/cloud-run/frontend/Dockerfile
+      - --build-arg
+      - VITE_BACKEND_HTTP_URL=${_BACKEND_HTTP_URL}
+      - --build-arg
+      - VITE_BACKEND_WS_URL=${_BACKEND_WS_URL}
+      - --build-arg
+      - VITE_GRAFANA_BASE_URL=${_GRAFANA_BASE_URL}
+      - -t
+      - us-central1-docker.pkg.dev/$PROJECT_ID/brainbar/frontend
+      - .
+images:
+  - us-central1-docker.pkg.dev/$PROJECT_ID/brainbar/frontend
+substitutions:
+  _BACKEND_HTTP_URL: ""
+  _BACKEND_WS_URL: ""
+  _GRAFANA_BASE_URL: ""
