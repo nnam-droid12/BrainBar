@@ -196,8 +196,7 @@ main {
 .take-timeline,
 .coverage-map,
 .demo-controls,
-.dailies-panel,
-.grafana-panel {
+.dailies-panel {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -208,8 +207,7 @@ main {
 .take-timeline h3,
 .coverage-map h3,
 .demo-controls h3,
-.dailies-panel h3,
-.grafana-panel h4 {
+.dailies-panel h3 {
   margin: 0 0 0.75rem;
   font-size: 0.78rem;
   text-transform: uppercase;
@@ -566,29 +564,128 @@ main {
   color: var(--blue);
 }
 
-/* --- grafana panel --------------------------------------------------------- */
+/* --- native charts (token usage, MCP tool activity, stage node metrics) --------- */
 
-.grafana-panel iframe {
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  display: block;
-}
-.grafana-panel-open-link {
-  display: inline-block;
-  margin-top: 0.5rem;
-  font-size: 0.76rem;
+.chart-subhead {
+  margin: 0 0 0.6rem;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
   color: var(--text-dim);
-  text-decoration: none;
 }
-.grafana-panel-open-link:hover {
-  color: var(--accent);
+.stage-health-section,
+.crew-health-section {
+  margin-top: 1.1rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--border);
 }
-.grafana-panel-placeholder {
+.stage-health-section:first-of-type,
+.crew-health-section:first-of-type {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+.chart-legend {
+  display: flex;
+  gap: 1.1rem;
+  margin-bottom: 0.9rem;
+}
+.chart-legend-item {
   display: flex;
   align-items: center;
-  justify-content: center;
-  border: 1px dashed var(--border-bright);
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.chart-legend-swatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.chart-rows {
+  display: flex;
+  flex-direction: column;
+}
+.chart-row {
+  display: grid;
+  grid-template-columns: 108px 1fr 56px;
+  align-items: center;
+  gap: 0.7rem;
+}
+.chart-row-tool {
+  grid-template-columns: 150px 1fr 44px;
+}
+.chart-row-label {
+  font-size: 0.8rem;
+  color: var(--text);
+  text-transform: capitalize;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chart-row-label-tool {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  text-transform: none;
+}
+.chart-row-value {
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-bar-track {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  background: var(--panel-alt);
+  border-radius: 4px;
+  outline: none;
+}
+.chart-bar-track:focus-visible {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.chart-bar-segment {
+  border-radius: 4px;
+  min-width: 3px;
+  transition: filter 0.1s ease;
+}
+.chart-bar-track:hover .chart-bar-segment,
+.chart-bar-track:focus-visible .chart-bar-segment {
+  filter: brightness(1.08);
+}
+
+.chart-tooltip {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 6px);
+  z-index: 5;
+  background: var(--text);
+  color: var(--bg);
   border-radius: 6px;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.72rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  white-space: nowrap;
+  box-shadow: 0 6px 16px -4px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+}
+.chart-tooltip strong {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+}
+.chart-tooltip-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  opacity: 0.85;
 }
 
 /* --- crew wall --------------------------------------------------------- */

@@ -27,4 +27,6 @@ export const api = {
       body: JSON.stringify({ fault_type: faultType, node: node || null }),
     }),
   clearFault: () => request('/faults/clear', { method: 'POST' }),
+  getStageTelemetry: () => request('/telemetry/stage'),
+  getCrewTelemetry: () => request('/telemetry/crew'),
 }

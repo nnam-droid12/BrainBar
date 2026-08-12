@@ -1,4 +1,4 @@
-import GrafanaPanel from '../components/GrafanaPanel.jsx'
+import CrewHealthPanel from '../components/CrewHealthPanel.jsx'
 
 const LATENCY_BUDGET_MS = Number(import.meta.env.VITE_LATENCY_BUDGET_MS || 15000)
 
@@ -35,7 +35,7 @@ export default function CrewWall({ stream }) {
           ))}
         </div>
 
-        <GrafanaPanel dashboardUid="brainbar-crew-health" title="Crew Health — token cost & MCP tool activity" height={420} />
+        <CrewHealthPanel />
       </div>
 
       <div className="wall-col wall-col-side">

@@ -4,7 +4,7 @@ import TakeTimeline from '../components/TakeTimeline.jsx'
 import CoverageMap from '../components/CoverageMap.jsx'
 import IncidentBanner from '../components/IncidentBanner.jsx'
 import DemoControls from '../components/DemoControls.jsx'
-import GrafanaPanel from '../components/GrafanaPanel.jsx'
+import StageHealthPanel from '../components/StageHealthPanel.jsx'
 
 const GRAFANA_BASE = import.meta.env.VITE_GRAFANA_BASE_URL
 
@@ -23,16 +23,7 @@ export default function ProductionWall({ stream }) {
       <div className="wall-col wall-col-main">
         <IncidentBanner incident={activeIncident} grafanaBaseUrl={GRAFANA_BASE} />
         <VerdictCard take={selected} />
-        <GrafanaPanel
-          dashboardUid="brainbar-stage-health"
-          title="Stage Health"
-          height={360}
-          timeRange={
-            selected
-              ? { from: 'now-2m', to: 'now' }
-              : undefined
-          }
-        />
+        <StageHealthPanel />
         {dailies && (
           <div className="dailies-panel">
             <h3>Technical dailies — {dailies.scene}</h3>

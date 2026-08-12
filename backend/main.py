@@ -7,7 +7,7 @@ from __future__ import annotations
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.routes import faults, internal, shoot, stage, takes
+from backend.routes import faults, internal, shoot, stage, takes, telemetry
 from backend.websocket_manager import manager
 
 app = FastAPI(title="BrainBar Backend")
@@ -29,6 +29,7 @@ app.include_router(takes.router)
 app.include_router(stage.router)
 app.include_router(faults.router)
 app.include_router(internal.router)
+app.include_router(telemetry.router)
 
 
 @app.get("/healthz")
