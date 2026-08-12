@@ -23,10 +23,22 @@ export default function VerdictCard({ take }) {
             {take.start_timecode || '--:--:--:--'} &rarr; {take.end_timecode || '--:--:--:--'}
           </div>
         </div>
-        <VerdictBadge verdict={take.verdict} size="lg" />
+        <VerdictBadge verdict={take.verdict} rolling={rolling} size="lg" />
       </div>
 
       {rolling && <p className="verdict-card-rolling">● ROLLING</p>}
+
+      {!rolling && !take.verdict && (
+        <div className="verdict-card-analyzing">
+          <p className="verdict-card-analyzing-pulse">● Crew is analyzing this take…</p>
+          <p className="muted small">
+            Continuity and the Technical Director are querying Grafana and the script in
+            parallel, then the Supervisor synthesizes the call. This usually takes
+            10–30s, but can take longer under Vertex AI rate limits — the page updates
+            live over WebSocket the moment it lands, no need to refresh.
+          </p>
+        </div>
+      )}
 
       {take.verdict && (
         <>

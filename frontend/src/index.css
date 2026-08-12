@@ -260,10 +260,16 @@ main {
   color: var(--blue);
   border-color: var(--blue);
 }
-.badge-pending {
-  background: rgba(107, 115, 133, 0.14);
-  color: var(--grey);
-  border-color: var(--grey);
+.badge-rolling {
+  background: rgba(180, 83, 9, 0.12);
+  color: var(--amber);
+  border-color: var(--amber);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+.badge-analyzing {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+  border-color: var(--accent);
   animation: pulse 1.6s ease-in-out infinite;
 }
 
@@ -314,6 +320,20 @@ main {
   font-family: var(--font-mono);
   font-size: 0.85rem;
   animation: pulse 1.2s ease-in-out infinite;
+}
+.verdict-card-analyzing {
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.9rem 1.1rem;
+  margin-top: 0.75rem;
+}
+.verdict-card-analyzing-pulse {
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  margin: 0 0 0.4rem;
+  animation: pulse 1.6s ease-in-out infinite;
 }
 .verdict-card-headline {
   font-size: 1.15rem;
@@ -551,6 +571,17 @@ main {
 .grafana-panel iframe {
   border-radius: 6px;
   border: 1px solid var(--border);
+  display: block;
+}
+.grafana-panel-open-link {
+  display: inline-block;
+  margin-top: 0.5rem;
+  font-size: 0.76rem;
+  color: var(--text-dim);
+  text-decoration: none;
+}
+.grafana-panel-open-link:hover {
+  color: var(--accent);
 }
 .grafana-panel-placeholder {
   display: flex;
