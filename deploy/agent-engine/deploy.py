@@ -14,11 +14,18 @@ Run from the repo root: python deploy/agent-engine/deploy.py
 """
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT))
+# vertexai's extra_packages upload does `tarfile.add(path)` with no arcname, so it
+# archives each path exactly as given. An absolute path (e.g. the Windows
+# "C:\...\agents" this script would otherwise pass) becomes the literal archive member
+# name, producing an unimportable structure once extracted server-side. cwd must be
+# the repo root so a plain relative "agents" is what gets archived instead.
+os.chdir(ROOT)
 
 import vertexai
 from vertexai import agent_engines
@@ -47,7 +54,7 @@ def main() -> None:
     remote_agent = agent_engines.create(
         agent_engine=supervisor,
         requirements=REQUIREMENTS,
-        extra_packages=[str(ROOT / "agents")],
+        extra_packages=["agents"],
         display_name="brainbar-supervisor",
         description=(
             "BrainBar Supervisor — synthesizes the circle-take call from the "
