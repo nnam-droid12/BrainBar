@@ -1,24 +1,12 @@
-import { useState } from 'react'
-import Header from './components/Header.jsx'
-import ProductionWall from './walls/ProductionWall.jsx'
-import CrewWall from './walls/CrewWall.jsx'
-import { useLiveStream } from './useLiveStream.js'
+import { Route, Routes } from 'react-router-dom'
+import Landing from './pages/Landing.jsx'
+import Dashboard from './pages/Dashboard.jsx'
 
 export default function App() {
-  const stream = useLiveStream()
-  const [wall, setWall] = useState('production')
-
   return (
-    <div className="app-shell">
-      <Header
-        scene={stream.scene}
-        setupId={stream.setupId}
-        takeNumber={stream.takeNumber}
-        connected={stream.connected}
-        wall={wall}
-        onWallChange={setWall}
-      />
-      <main>{wall === 'production' ? <ProductionWall stream={stream} /> : <CrewWall stream={stream} />}</main>
-    </div>
+    <Routes>
+      <Route path="/" element={<Landing />} />
+      <Route path="/dashboard" element={<Dashboard />} />
+    </Routes>
   )
 }
