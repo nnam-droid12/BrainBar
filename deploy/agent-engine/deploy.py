@@ -53,9 +53,9 @@ def main() -> None:
             "BrainBar Supervisor — synthesizes the circle-take call from the "
             "Technical Director's and Continuity's verdicts."
         ),
+        # GOOGLE_CLOUD_PROJECT / GOOGLE_CLOUD_LOCATION are reserved names on Agent
+        # Engine — it injects the deployment's own project/location automatically.
         env_vars={
-            "GOOGLE_CLOUD_PROJECT": config.google_cloud_project,
-            "GOOGLE_CLOUD_LOCATION": config.google_cloud_location,
             "GOOGLE_GENAI_USE_VERTEXAI": "true",
             "GEMINI_PRO_MODEL": config.gemini_pro_model,
             "GEMINI_FLASH_MODEL": config.gemini_flash_model,
