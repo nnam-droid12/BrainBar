@@ -1,5 +1,7 @@
 import { LABELS } from './VerdictBadge.jsx'
 import CrewStatusRow from './CrewStatusRow.jsx'
+import VerdictNarration from './VerdictNarration.jsx'
+import StageVolumeFeed from './StageVolumeFeed.jsx'
 
 function StatusStamp({ take }) {
   if (!take) {
@@ -61,9 +63,11 @@ export default function LiveTakeHero({ take, dailiesReady }) {
               watch the crew analyze a take live.
             </p>
           )}
+          <VerdictNarration take={take} />
         </div>
         <StatusStamp take={take} />
       </div>
+      {take && <StageVolumeFeed setupId={take.setup_id} />}
       <CrewStatusRow take={take} dailiesReady={dailiesReady} />
     </section>
   )

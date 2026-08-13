@@ -24,6 +24,11 @@ class AgentsConfig(BaseSettings):
     gemini_pro_model: str = "gemini-2.5-pro"
     gemini_flash_model: str = "gemini-2.5-flash"
 
+    # GA on Vertex AI in us-central1 as of this writing — used only for spoken verdict
+    # narration (text in, audio out; see agents/narration.py), never for analysis itself.
+    gemini_live_model: str = "gemini-live-2.5-flash-native-audio"
+    narrator_voice: str = "Charon"
+
     rag_corpus_display_name: str = "brainbar-production-assets"
     # RAG Engine's Spanner-backed mode is allowlist-only in us-central1/us-east1/us-east4
     # for new projects; europe-west4 runs the default (Basic/serverless) tier without

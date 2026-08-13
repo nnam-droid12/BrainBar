@@ -6,6 +6,7 @@ result to every connected frontend.
 from __future__ import annotations
 
 import asyncio
+import base64
 import csv
 import logging
 from pathlib import Path
@@ -13,6 +14,7 @@ from pathlib import Path
 from fastapi import APIRouter
 
 from agents.first_ad.act import act
+from agents.narration import synthesize_verdict_audio
 from agents.supervisor.orchestrate import handle_cut
 from backend.state import state
 from backend.websocket_manager import manager
@@ -144,6 +146,13 @@ async def _on_cut(payload: dict) -> None:
         "routing_decision", {"take_id": take_id, "routing": routing.model_dump(mode="json")}
     )
 
+    # Fire-and-forget: spoken narration is a demo enhancement layered on top of a
+    # verdict that has already landed, not something the pipeline should ever wait on
+    # or fail over. Runs concurrently with the First AD's action-taking below.
+    narration_task = asyncio.create_task(_narrate_verdict(take_id, verdict.headline))
+    _background_tasks.add(narration_task)
+    narration_task.add_done_callback(_background_tasks.discard)
+
     action_log = await act(
         verdict=verdict,
         start_timecode=start_timecode,
@@ -162,4 +171,18 @@ async def _on_cut(payload: dict) -> None:
         }
     await manager.broadcast(
         "action_log", {"take_id": take_id, "action_log": action_log.model_dump(mode="json")}
+    )
+
+
+async def _narrate_verdict(take_id: str, headline: str) -> None:
+    audio = await synthesize_verdict_audio(headline)
+    if audio is None:
+        return
+    await manager.broadcast(
+        "verdict_audio",
+        {
+            "take_id": take_id,
+            "audio_base64": base64.b64encode(audio).decode("ascii"),
+            "mime_type": "audio/wav",
+        },
     )

@@ -91,6 +91,12 @@ function reducer(state, action) {
       const p = action.payload
       return upsertTake(state, p.take_id, { error: p.error, rolling: false })
     }
+    case 'verdict_audio': {
+      const p = action.payload
+      return upsertTake(state, p.take_id, {
+        audioUrl: `data:${p.mime_type};base64,${p.audio_base64}`,
+      })
+    }
     case 'node_down': {
       const p = action.payload
       return {
