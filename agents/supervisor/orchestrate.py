@@ -61,7 +61,13 @@ async def handle_cut(
         ),
     )
 
-    supervisor = build_supervisor_agent(ModelTier.PRO)
+    # Mirror the same tier decide_model_tier_observed already made for this take
+    # (see agents/supervisor/routing.py) instead of always paying for Pro here — a
+    # take that was routed to Flash for its technical diagnosis shouldn't then force
+    # a second, separate Pro call just to synthesize the call from already-structured
+    # verdicts, which was needlessly doubling this take's Pro-tier load on exactly
+    # the hero-coverage/fault takes most likely to already be tight on Pro quota.
+    supervisor = build_supervisor_agent(routing.tier)
     prompt = (
         f"Take {take_id} (scene {scene}, setup {setup_id}, take {take_number}) just cut.\n\n"
         f"TechnicalVerdict:\n{technical.model_dump_json(indent=2)}\n\n"
