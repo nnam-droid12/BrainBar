@@ -65,6 +65,14 @@ class AgentsConfig(BaseSettings):
 
     ai_observability_enabled: bool = True
 
+    # TEMPORARY: this project's Pro-tier Dynamic Shared Quota is currently exhausted
+    # and not eligible for a self-service increase (confirmed in Cloud Console), so
+    # every hero-coverage/fault-active take that routes to Pro fails outright rather
+    # than just running slower. Force Flash everywhere until Pro quota is usable
+    # again — see agents/supervisor/routing.py's decide_model_tier. Flip back to
+    # False once Pro calls succeed reliably again.
+    force_flash_only: bool = True
+
     # --- Backend ---
     backend_host: str = "0.0.0.0"
     backend_port: int = 8080

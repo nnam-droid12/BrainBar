@@ -7,6 +7,7 @@ import httpx
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from agents.config import config as agents_config
 from agents.dit.compile import compile_dailies
 from agents.schemas import ModelTier
 from agents.supervisor.end_of_day import generate_report
@@ -73,7 +74,8 @@ async def wrap_shoot() -> dict:
     )
     state.set_dailies(dailies)
 
-    report = await generate_report(verdicts, dailies, model_tier=ModelTier.PRO)
+    report_tier = ModelTier.FLASH if agents_config.force_flash_only else ModelTier.PRO
+    report = await generate_report(verdicts, dailies, model_tier=report_tier)
 
     payload = {"dailies": dailies.model_dump(mode="json"), "report": report}
     await manager.broadcast("wrap", payload)

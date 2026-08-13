@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import logging
 
+from agents.config import config
 from agents.observability import record_routing_decision
 from agents.schemas import ModelTier, RoutingDecision
 from agents.supervisor.latency_check import check_recent_latency
@@ -26,6 +27,14 @@ HERO_COVERAGE_TYPES = {"master"}
 def decide_model_tier(
     *, take_id: str, coverage_type: str, fault_active: bool
 ) -> RoutingDecision:
+    if config.force_flash_only:
+        return RoutingDecision(
+            take_id=take_id,
+            agent="technical_director",
+            tier=ModelTier.FLASH,
+            reason="force_flash_only is set (Pro-tier quota currently exhausted) — routing to Flash.",
+        )
+
     if fault_active or coverage_type in HERO_COVERAGE_TYPES:
         tier = ModelTier.PRO
         reason = (
