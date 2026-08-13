@@ -30,6 +30,8 @@ steps:
       - --quiet
 images:
   - us-central1-docker.pkg.dev/$PROJECT_ID/brainbar/frontend
+options:
+  logging: CLOUD_LOGGING_ONLY
 substitutions:
   _BACKEND_HTTP_URL: https://brainbar-backend-854441956422.us-central1.run.app
   _BACKEND_WS_URL: wss://brainbar-backend-854441956422.us-central1.run.app/stream

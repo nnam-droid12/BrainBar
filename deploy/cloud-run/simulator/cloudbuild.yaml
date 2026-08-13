@@ -29,3 +29,5 @@ steps:
       - --quiet
 images:
   - us-central1-docker.pkg.dev/$PROJECT_ID/brainbar/simulator
+options:
+  logging: CLOUD_LOGGING_ONLY
