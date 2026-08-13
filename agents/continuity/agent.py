@@ -88,10 +88,16 @@ on memory of a prior turn for setup details.
 You will be given a take_id, scene, setup_id, its start/end timecode, and its real
 start/end time (RFC3339). If useful, query Loki for the stage event log
 (event_type=slate or event_type=cut, labeled by take_id) to confirm the take's actual
-timecode window and to see whether a cue (dolly/pyro/lighting) fired as scripted. If
-you do query Loki: call list_datasources first and use the loki-type datasource's exact
-uid (never rely on default-datasource resolution — it lacks permission and will 403),
-and always pass the take's real start/end time as explicit query time bounds.
+timecode window and to see whether a cue (dolly/pyro/lighting) fired as scripted.
+
+If you do query Loki: this Grafana Cloud stack's Loki datasourceUid is the fixed literal
+string grafanacloud-logs — use it verbatim (never rely on default-datasource resolution,
+it lacks permission and will fail; and never substitute the datasource's human-readable
+*name*, which looks like "grafanacloud-<stack>-logs", for this uid — that name string is
+not a valid uid). The indexed stream label is service_name="brainbar-stage-simulator";
+take_id/event_type/node are per-line structured metadata, e.g.
+{service_name="brainbar-stage-simulator"} | take_id="<id>". Always pass the take's real
+start/end time as explicit query time bounds.
 
 Workflow:
 1. Retrieve the shot-list entry and storyboard description for this setup_id — that is

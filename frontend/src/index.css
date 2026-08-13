@@ -90,6 +90,8 @@ body {
   display: flex;
   flex-direction: column;
   line-height: 1.1;
+  text-decoration: none;
+  cursor: pointer;
 }
 .brand-mark {
   font-family: var(--font-mono);

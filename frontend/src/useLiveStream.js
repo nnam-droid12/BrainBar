@@ -70,6 +70,7 @@ function reducer(state, action) {
       return upsertTake(state, p.take_id, {
         start_timecode: p.start_timecode,
         end_timecode: p.end_timecode,
+        rolling: false,
       })
     }
     case 'verdict': {

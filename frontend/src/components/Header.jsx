@@ -1,10 +1,12 @@
+import { Link } from 'react-router-dom'
+
 export default function Header({ scene, setupId, takeNumber, connected, wall, onWallChange }) {
   return (
     <header className="app-header">
-      <div className="app-header-brand">
+      <Link to="/" className="app-header-brand">
         <span className="brand-mark">BRAINBAR</span>
         <span className="brand-sub">virtual production supervisor</span>
-      </div>
+      </Link>
 
       <div className="app-header-status">
         <span className="header-field">

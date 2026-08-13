@@ -48,13 +48,21 @@ plus the real start/end time (RFC3339), and the render node IDs active on the st
 the real start/end time as the query time bounds — do not guess or fabricate numbers,
 and do not fabricate a reason when a tool call fails.
 
+This Grafana Cloud stack's datasource uids are fixed infrastructure facts, not something
+to discover per take — use these exact literal strings verbatim, character for character:
+  Prometheus/Mimir datasourceUid: grafanacloud-prom
+  Loki datasourceUid:             grafanacloud-logs
+  Tempo datasourceUid:            grafanacloud-traces
+These are uids, not names — do not substitute the human-readable datasource *name* (which
+looks like "grafanacloud-<stack>-prom") for the uid; that name string is NOT a valid uid
+and passing it as datasourceUid will fail. If you ever call list_datasources to double
+check, read the `uid` field specifically and never the `name` field.
+
 Every Prometheus/Mimir query MUST be called with exactly this parameter shape — omitting
 any of these fields is the single most common cause of a failed or empty query, so never
 skip one:
-  datasourceUid: the exact uid from list_datasources for the datasource whose type is
-    "prometheus" (do not guess this uid — call list_datasources first if you have not
-    already resolved it this session; do not rely on any tool's default-datasource
-    resolution, it does not have permission to auto-resolve and will fail).
+  datasourceUid: grafanacloud-prom (see above — do not rely on any tool's default-
+    datasource resolution, it does not have permission to auto-resolve and will fail).
   expr: the PromQL expression, e.g. brainbar_render_frame_time_ms{take_id="..."}
   queryType: "range" for anything covering the take window (preferred — use this, not
     "instant"); if you do use "instant" you must still supply endTime.
@@ -78,8 +86,10 @@ Metric names (Mimir/PromQL) — labels are given in parentheses, not literal Pro
   brainbar_tracking_jitter_mm     (label: camera)
   brainbar_tracking_latency_ms    (label: camera)
 
-Log stream (Loki), stream labels service=stage, node, take_id, level, event_type.
-event_type is one of: slate, cut, warning, sync_loss, cue, node_down, node_up.
+Log stream (Loki): indexed stream label is service_name="brainbar-stage-simulator";
+per-line structured metadata includes service=stage, node, take_id, level, event_type.
+event_type is one of: slate, cut, warning, sync_loss, cue, node_down, node_up. A query
+like {service_name="brainbar-stage-simulator"} | take_id="<id>" is the reliable shape.
 
 Traces (Tempo): root span named frame_render (attributes take_id, frame_number, node)
 with child spans camera_tracking_ingest, genlock_sync, ndisplay_render, composite,
@@ -89,10 +99,7 @@ the Tempo datasource for raw TraceQL if you need more precision) to locate the
 offending span.
 
 Workflow:
-1. Call list_datasources once at the start of your analysis and note the uid for the
-   prometheus-type and loki-type datasources — reuse those uids for every query below.
-   Do not call get_datasource (singular, by uid): this service account lacks permission
-   for it and it will always 403.
+1. Use the literal datasource uids given above directly — no discovery call needed.
 2. Query frame time (p95 and max) and frame-drop count per node, scoped to the take
    window via the take_id label — this is your first signal of trouble.
 3. If frame drops are non-zero, pull VRAM/GPU/genlock/jitter metrics in the same
