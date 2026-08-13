@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import Header from '../components/Header.jsx'
 import ProductionWall from '../walls/ProductionWall.jsx'
 import CrewWall from '../walls/CrewWall.jsx'
@@ -20,9 +19,6 @@ export default function Dashboard() {
         onWallChange={setWall}
       />
       <main>{wall === 'production' ? <ProductionWall stream={stream} /> : <CrewWall stream={stream} />}</main>
-      <Link to="/" className="back-to-landing">
-        &larr; BrainBar
-      </Link>
     </div>
   )
 }

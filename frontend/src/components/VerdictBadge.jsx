@@ -1,4 +1,4 @@
-const LABELS = {
+export const LABELS = {
   circle: 'CIRCLED',
   hold: 'HOLD',
   reshoot: 'RESHOOT',
