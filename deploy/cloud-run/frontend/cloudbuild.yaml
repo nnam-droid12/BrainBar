@@ -13,9 +13,24 @@ steps:
       - -t
       - us-central1-docker.pkg.dev/$PROJECT_ID/brainbar/frontend
       - .
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - brainbar-frontend
+      - --image=us-central1-docker.pkg.dev/$PROJECT_ID/brainbar/frontend
+      - --region=us-central1
+      - --platform=managed
+      - --allow-unauthenticated
+      - --max-instances=3
+      - --cpu=1
+      - --memory=256Mi
+      - --concurrency=80
+      - --quiet
 images:
   - us-central1-docker.pkg.dev/$PROJECT_ID/brainbar/frontend
 substitutions:
-  _BACKEND_HTTP_URL: ""
-  _BACKEND_WS_URL: ""
-  _GRAFANA_BASE_URL: ""
+  _BACKEND_HTTP_URL: https://brainbar-backend-854441956422.us-central1.run.app
+  _BACKEND_WS_URL: wss://brainbar-backend-854441956422.us-central1.run.app/stream
+  _GRAFANA_BASE_URL: https://sincerechowder2500.grafana.net

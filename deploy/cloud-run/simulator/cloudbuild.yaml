@@ -7,5 +7,25 @@ steps:
       - -t
       - us-central1-docker.pkg.dev/$PROJECT_ID/brainbar/simulator
       - .
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - brainbar-simulator
+      - --image=us-central1-docker.pkg.dev/$PROJECT_ID/brainbar/simulator
+      - --region=us-central1
+      - --platform=managed
+      - --allow-unauthenticated
+      - --service-account=brainbar-runtime@$PROJECT_ID.iam.gserviceaccount.com
+      - --min-instances=1
+      - --max-instances=2
+      - --no-cpu-throttling
+      - --cpu=1
+      - --memory=512Mi
+      - --concurrency=80
+      - --set-env-vars=OTLP_ENDPOINT=https://otlp-gateway-prod-eu-central-0.grafana.net/otlp,OTLP_INSTANCE_ID=1771008,BACKEND_WEBHOOK_URL=https://brainbar-backend-854441956422.us-central1.run.app/internal/simulator-events,GRAFANA_CLOUD_STACK_URL=https://sincerechowder2500.grafana.net
+      - --set-secrets=OTLP_API_KEY=brainbar-otlp-api-key:latest,GRAFANA_SERVICE_ACCOUNT_TOKEN=brainbar-grafana-sa-token:latest
+      - --quiet
 images:
   - us-central1-docker.pkg.dev/$PROJECT_ID/brainbar/simulator
