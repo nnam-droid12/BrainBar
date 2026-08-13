@@ -35,9 +35,9 @@ export default function VerdictCard({ take }) {
             {take.error}
           </p>
           <p className="muted small">
-            This is almost always a Vertex AI rate limit from heavy testing volume, not
-            a broken take — roll this setup again from the demo controls to retry, or
-            wait a minute for quota to recover.
+            The crew hit a backend error partway through analysis — usually a transient
+            Vertex AI hiccup (rate limit or a brief service blip) rather than a problem
+            with the take itself. Roll this setup again from the demo controls to retry.
           </p>
         </div>
       )}

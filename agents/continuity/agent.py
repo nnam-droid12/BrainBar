@@ -11,12 +11,32 @@ import asyncio
 
 import vertexai
 from google.adk.agents import LlmAgent
+from google.api_core import exceptions as api_exceptions
+from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 from vertexai import rag
 
 from agents.config import config
 from agents.continuity.rag_setup import ensure_corpus
 from agents.mcp_client import build_grafana_toolset
 from agents.schemas import CreativeVerdict, ModelTier
+
+# RAG Engine wraps backend faults (e.g. its Spanner-backed corpus metadata store
+# blipping) in a bare RuntimeError whose args carry the original google.api_core
+# exception rather than raising that exception directly, so retry-worthiness has to
+# be sniffed out of the wrapped args instead of the exception type itself.
+_TRANSIENT_API_ERRORS = (
+    api_exceptions.InternalServerError,
+    api_exceptions.ServiceUnavailable,
+    api_exceptions.TooManyRequests,
+    api_exceptions.DeadlineExceeded,
+)
+
+
+def _is_transient_rag_error(exc: BaseException) -> bool:
+    return isinstance(exc, RuntimeError) and any(
+        isinstance(arg, _TRANSIENT_API_ERRORS) for arg in exc.args
+    )
+
 
 # ADK's native VertexAiRagRetrieval tool asks Gemini 2+ models to use RAG as a
 # built-in "retrieval" tool alongside our function-declared Grafana MCP tools. That
@@ -28,6 +48,12 @@ from agents.schemas import CreativeVerdict, ModelTier
 def _make_retrieval_tool(corpus_name: str):
     vertexai.init(project=config.google_cloud_project, location=config.rag_corpus_location)
 
+    @retry(
+        retry=retry_if_exception(_is_transient_rag_error),
+        stop=stop_after_attempt(4),
+        wait=wait_exponential(multiplier=1, min=1, max=10),
+        reraise=True,
+    )
     async def retrieve_production_documents(query: str) -> list[str]:
         """Retrieves relevant passages from the script, shot list, storyboards, and
         call sheet for the given query (e.g. "setup 1 intended framing and lens")."""
