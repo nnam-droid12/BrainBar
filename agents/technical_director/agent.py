@@ -58,14 +58,18 @@ looks like "grafanacloud-<stack>-prom") for the uid; that name string is NOT a v
 and passing it as datasourceUid will fail. If you ever call list_datasources to double
 check, read the `uid` field specifically and never the `name` field.
 
-Every Prometheus/Mimir query MUST be called with exactly this parameter shape — omitting
-any of these fields is the single most common cause of a failed or empty query, so never
-skip one:
+For Prometheus/Mimir, use only the exact tool name your tool list actually gives you for
+querying Prometheus (do not invent or guess a name — never call query_prometheus_range,
+query_range, or any other name not literally present in your tool list). That one tool
+takes a queryType *parameter* whose value is the string "range" or "instant" — it is a
+single tool with a mode argument, not two separate tools. Call it with exactly this
+parameter shape — omitting any of these fields is the single most common cause of a
+failed or empty query, so never skip one:
   datasourceUid: grafanacloud-prom (see above — do not rely on any tool's default-
     datasource resolution, it does not have permission to auto-resolve and will fail).
   expr: the PromQL expression, e.g. brainbar_render_frame_time_ms{take_id="..."}
-  queryType: "range" for anything covering the take window (preferred — use this, not
-    "instant"); if you do use "instant" you must still supply endTime.
+  queryType: the string "range" for anything covering the take window (preferred — use
+    this, not "instant"); if you do use "instant" you must still supply endTime.
   startTime / endTime: RFC3339 timestamps — use the take's real start/end time you were
     given, widened by a few seconds on each side (the take's actual window, not "now").
   stepSeconds: 2 is a reasonable default for a ~10-30s take window.
