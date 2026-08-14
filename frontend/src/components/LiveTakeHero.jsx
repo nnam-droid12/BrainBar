@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { LABELS } from './VerdictBadge.jsx'
 import CrewStatusRow from './CrewStatusRow.jsx'
 import VerdictNarration from './VerdictNarration.jsx'
@@ -43,6 +44,8 @@ function StatusStamp({ take }) {
 }
 
 export default function LiveTakeHero({ take, dailiesReady }) {
+  const [narrating, setNarrating] = useState(false)
+
   return (
     <section className="live-hero">
       <div className="live-hero-top">
@@ -63,11 +66,11 @@ export default function LiveTakeHero({ take, dailiesReady }) {
               watch the crew analyze a take live.
             </p>
           )}
-          <VerdictNarration take={take} />
+          <VerdictNarration take={take} onPlayingChange={setNarrating} />
         </div>
         <StatusStamp take={take} />
       </div>
-      {take && <StageVolumeFeed setupId={take.setup_id} />}
+      {take && <StageVolumeFeed setupId={take.setup_id} narrating={narrating} />}
       <CrewStatusRow take={take} dailiesReady={dailiesReady} />
     </section>
   )

@@ -1107,6 +1107,27 @@ main {
   max-width: 70ch;
 }
 
+.stage-volume-feed-live .stage-volume-feed-frame {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.stage-volume-feed-live-badge {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  z-index: 1;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #fff;
+  background: color-mix(in srgb, var(--accent) 85%, black);
+  border-radius: 999px;
+  padding: 0.25rem 0.55rem;
+  animation: pulse 1s ease-in-out infinite;
+}
+
 /* --- verdict narration (spoken call) ---------------------------------------------- */
 
 .verdict-narration {
