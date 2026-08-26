@@ -5,6 +5,8 @@ once, so swapping a model tier or a datasource is a one-line change.
 """
 from __future__ import annotations
 
+import os
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -115,3 +117,18 @@ class AgentsConfig(BaseSettings):
 
 
 config = AgentsConfig()
+
+# Every LlmAgent below is built with a bare model-id string (e.g. "gemini-2.5-flash"),
+# so ADK constructs its own default google-genai Client for it — and that Client reads
+# GOOGLE_GENAI_USE_VERTEXAI/GOOGLE_CLOUD_PROJECT/GOOGLE_CLOUD_LOCATION directly from
+# os.environ, never from this AgentsConfig object. On Cloud Run that's harmless (the
+# deploy config sets these as real container env vars), but pydantic-settings' env_file
+# loading above only populates *this object's* attributes — it does not export them to
+# os.environ for other libraries to see. Without this, a bare `python -m backend.run`
+# reading only .env silently falls back to the free Gemini Developer API (5 req/min)
+# instead of Vertex AI, and every take fails with an empty response once that quota is
+# hit — confirmed by an actual local run, not a hypothetical. setdefault() so a real
+# pre-set env var (Cloud Run, a shell export) always wins over the .env-derived value.
+os.environ.setdefault("GOOGLE_GENAI_USE_VERTEXAI", str(config.google_genai_use_vertexai).lower())
+os.environ.setdefault("GOOGLE_CLOUD_PROJECT", config.google_cloud_project)
+os.environ.setdefault("GOOGLE_CLOUD_LOCATION", config.google_cloud_location)

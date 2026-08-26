@@ -24,8 +24,17 @@ def _scalar(result: list[dict], default: float = 0.0) -> float:
 
 @router.get("/stage")
 async def stage_telemetry() -> dict:
-    frame_time = await query_instant("brainbar_render_frame_time_ms")
-    vram = await query_instant("brainbar_node_vram_percent")
+    # max by (node) — not the bare metric name: brainbar_render_frame_time_ms and
+    # brainbar_node_vram_percent both also carry a take_id label, so an unaggregated
+    # instant query returns one series per (node, take_id) combination. Once more than
+    # one take has recent samples (any session with more than a single take rolled),
+    # that's multiple rows sharing the same node — which the frontend keys by node,
+    # producing React's "two children with the same key" warning and, worse, silently
+    # picking whichever duplicate happens to sort first rather than each node's actual
+    # latest value. Confirmed live: this fired on every take past the first one in an
+    # actual session. drift below already got this right; frame_time/vram didn't.
+    frame_time = await query_instant("max by (node) (brainbar_render_frame_time_ms)")
+    vram = await query_instant("max by (node) (brainbar_node_vram_percent)")
     drift = await query_instant("max by (device) (brainbar_genlock_drift_us)")
 
     return {
