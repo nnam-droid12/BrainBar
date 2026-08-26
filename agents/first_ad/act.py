@@ -13,6 +13,7 @@ async def act(
     end_timecode: str,
     start_time_utc: str,
     end_time_utc: str,
+    node_ids: list[str],
     node_down: str | None = None,
     model_tier: ModelTier = ModelTier.FLASH,
 ) -> ActionLog:
@@ -26,7 +27,8 @@ async def act(
         f"Headline: {verdict.headline}\n"
         f"Reasoning: {verdict.reasoning}\n"
         f"recommend_reshoot: {verdict.recommend_reshoot}\n"
-        f"node_down: {node_down or 'none'}\n\n"
+        f"node_down: {node_down or 'none'}\n"
+        f"Active render nodes this take: {', '.join(node_ids)}\n\n"
         "Take the appropriate actions and report the ActionLog."
     )
     raw_text, _tool_calls = await run_single_turn(agent, prompt, app_name="brainbar-first-ad")

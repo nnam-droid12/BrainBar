@@ -42,7 +42,16 @@ def main() -> None:
                     "check the stack was created with the default Cloud stack bundle."
                 )
 
-        stage_dashboard = build_stage_health_dashboard(uids["prometheus"], uids["loki"])
+        ml_uid = client.find_datasource_uid("ml-metrics")
+        if not ml_uid:
+            print(
+                "No Grafana ML metrics datasource found — the VRAM forecast panel will "
+                "be skipped. See README.md's predictive-forecasting setup section to "
+                "create the forecast job once, then re-run this script.",
+                file=sys.stderr,
+            )
+
+        stage_dashboard = build_stage_health_dashboard(uids["prometheus"], uids["loki"], ml_uid)
         result = client.upsert_dashboard(stage_dashboard, FOLDER_UID)
         print(f"Stage Health dashboard: {client.stack_url}{result['url']}")
 

@@ -34,6 +34,7 @@ class GrafanaProvisioningClient:
         "alert-state-history",
         "usage",  # matches both the loki "usage-insights" and prometheus "usage" datasources
         "cardinality-management",
+        "ml-metrics",  # Grafana ML's own prometheus-typed output datasource, not general-purpose
     )
 
     def get_datasource_uids(self) -> dict[str, str]:
@@ -54,6 +55,20 @@ class GrafanaProvisioningClient:
                 continue  # keep the first general-purpose match if more than one remains
             uids[ds_type] = ds["uid"]
         return uids
+
+    def find_datasource_uid(self, name_fragment: str) -> str | None:
+        """Looks up a datasource by a substring of its name — for special-purpose ones
+        like Grafana ML's "...-ml-metrics" output datasource that get_datasource_uids()
+        deliberately excludes from the general-purpose lookup above. Returns None (not
+        an error) if it doesn't exist yet — e.g. no Grafana ML forecast job has been
+        created on this stack — so callers can render a dashboard without that panel
+        instead of failing provisioning entirely."""
+        resp = self._client.get("/api/datasources")
+        resp.raise_for_status()
+        for ds in resp.json():
+            if name_fragment in ds.get("name", ""):
+                return ds["uid"]
+        return None
 
     def ensure_folder(self, title: str, uid: str) -> str:
         resp = self._client.get(f"/api/folders/{uid}")

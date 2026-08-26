@@ -159,6 +159,7 @@ async def _on_cut(payload: dict) -> None:
         end_timecode=end_timecode,
         start_time_utc=start_time_utc,
         end_time_utc=end_time_utc,
+        node_ids=NODE_IDS,
         node_down=node_down,
     )
     state.set_action_log(take_id, action_log)

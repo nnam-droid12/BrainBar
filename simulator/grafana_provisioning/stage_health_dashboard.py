@@ -17,8 +17,14 @@ from simulator.grafana_provisioning.panel_helpers import (
 
 DASHBOARD_UID = "brainbar-stage-health"
 
+# Name of the Grafana ML metric forecast job this dashboard visualizes, if one has been
+# created (see README.md's "Predictive VRAM forecasting" setup section — creating the
+# job itself is a one-time Grafana Cloud portal action, not something provisioned here).
+# agents/first_ad/agent.py queries this same job's output at runtime to act on it.
+VRAM_FORECAST_JOB_NAME = "brainbar_vram_forecast"
 
-def build_dashboard(prom_uid: str, loki_uid: str) -> dict:
+
+def build_dashboard(prom_uid: str, loki_uid: str, ml_uid: str | None = None) -> dict:
     grid = GridCursor(row_height=8)
     panels = [
         stat_panel(
@@ -130,6 +136,24 @@ def build_dashboard(prom_uid: str, loki_uid: str) -> dict:
             grid.place(24, 10),
         ),
     ]
+
+    if ml_uid:
+        panels.append(
+            timeseries_panel(
+                "VRAM % — actual vs. Grafana ML forecast, by node",
+                ml_uid,
+                [
+                    (f"{VRAM_FORECAST_JOB_NAME}:actual", "{{node}} actual"),
+                    (f"{VRAM_FORECAST_JOB_NAME}:predicted", "{{node}} forecast"),
+                ],
+                grid.place(24),
+                unit="percent",
+                thresholds=[
+                    {"color": "green", "value": None},
+                    {"color": "red", "value": 90},
+                ],
+            )
+        )
 
     return {
         "uid": DASHBOARD_UID,

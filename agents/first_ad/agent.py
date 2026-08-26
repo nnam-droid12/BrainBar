@@ -1,12 +1,16 @@
 """The First AD: turns a verdict into consequences — pre-staging a corrective take,
-opening/driving Grafana incidents when hardware fails, silencing alert storms, and
-annotating the Stage Health dashboard with every take's call.
+opening/driving Grafana incidents when hardware fails, silencing alert storms,
+annotating the Stage Health dashboard with every take's call, pre-emptively load-
+shedding a node Grafana ML forecasts will exhaust its VRAM soon, and paging a real
+on-call human through Grafana Cloud IRM on a hardware failure instead of stopping at
+an incident nobody may be watching.
 """
 from __future__ import annotations
 
 from google.adk.agents import LlmAgent
 
 from agents.config import config
+from agents.first_ad.oncall_client import page_oncall
 from agents.first_ad.stage_control_client import drain_node, loadshed, set_affinity
 from agents.mcp_client import build_grafana_toolset
 from agents.schemas import ActionLog, ModelTier
@@ -20,6 +24,8 @@ GRAFANA_TOOL_FILTER = [
     "alerting_manage_routing",
     "create_annotation",
     "update_annotation",
+    "query_prometheus",
+    "list_datasources",
 ]
 
 INSTRUCTION = """\
@@ -28,8 +34,8 @@ Supervisor's verdict into real consequences — you never just report, you act, 
 log every action with its rationale.
 
 You will be given a take's verdict (verdict, headline, reasoning, recommend_reshoot),
-its take_id/scene/setup_id/timecode, and whether a node went down this take
-(node_down, or none).
+its take_id/scene/setup_id/timecode, whether a node went down this take (node_down, or
+none), and the list of active render nodes this take.
 
 Rules:
 1. ALWAYS annotate the Stage Health dashboard for this take: create_annotation with
@@ -46,11 +52,30 @@ Rules:
    silence the downstream alert storm for that node so the human brain-bar isn't
    flooded (alerting_manage_rules or alerting_manage_routing — silence, don't delete,
    the underlying alert rule). Also call drain_node to route render load off it.
-4. Never take an action beyond what is justified by the verdict you were given. If
-   nothing is wrong, your only action is the dashboard annotation.
-5. For every action you take, record its type, target, rationale, and the tool
-   result — including if a tool call failed (e.g. backend unreachable). A failed
-   action is still logged, never silently dropped.
+   Additionally, page the real on-call human — a hardware failure on set warrants an
+   actual page, not just an incident nobody may be watching: call page_oncall with
+   alert_uid set to the node name (so repeated pages for the same node group into one
+   alert instead of re-paging every take), a clear title, and a message citing the
+   verdict headline and take_id. Log this as its own action, type page_oncall.
+4. Predictive VRAM check (do this every take, independent of the verdict): call
+   list_datasources and find the one whose name contains "ml-metrics" — this is
+   Grafana ML's forecast-output datasource, separate from the general Prometheus
+   datasource you use elsewhere. If it exists, query it (query_prometheus, instant)
+   for brainbar_vram_forecast:predicted for each active node this take. If any node's
+   forecast value is 90 or higher, that node is predicted to hit critical VRAM soon —
+   pre-emptively call loadshed or set_affinity on it now, before it actually happens,
+   with a reason citing the forecast value. Log this as its own action, type
+   preventive_load_shed, distinct from the reactive pre-staging in rule 2. If the
+   ml-metrics datasource doesn't exist yet (no forecast job configured on this stack)
+   or the query returns no data, skip this rule silently — it's a nice-to-have, not a
+   blocker for the rest of your rules.
+5. Never take an action beyond what is justified by the verdict you were given (rules
+   3 and 4 are the only ones that act independent of the verdict itself). If nothing
+   is wrong and no node is at forecast risk, your only action is the dashboard
+   annotation.
+6. For every action you take, record its type, target, rationale, and the tool
+   result — including if a tool call failed (e.g. backend unreachable, or on-call
+   webhook not configured). A failed action is still logged, never silently dropped.
 
 Report the required structured ActionLog.
 """
@@ -68,6 +93,7 @@ def build_agent(model_tier: ModelTier = ModelTier.FLASH) -> LlmAgent:
             loadshed,
             drain_node,
             set_affinity,
+            page_oncall,
         ],
         output_schema=ActionLog,
         output_key="action_log",

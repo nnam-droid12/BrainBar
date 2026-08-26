@@ -54,6 +54,44 @@ Every row below is a real, runtime call — not a name-drop. File paths point at
 | Annotation history as playbook | [`agents/technical_director/agent.py`](agents/technical_director/agent.py) — `get_annotations` search over past `brainbar-verdict` annotations before diagnosing a new fault, via MCP |
 | Token cost governance | [`agents/pricing.py`](agents/pricing.py) — estimated $ per agent per take, on the Crew Health dashboard and in the frontend |
 | Hosted OAuth MCP (demo) | [`scripts/demo_hosted_oauth_mcp.md`](scripts/demo_hosted_oauth_mcp.md) — the interactive "authorize as yourself" Cloud MCP path, alongside the unattended OSS+IAM path used in deployment |
+| Predictive VRAM forecasting (Grafana ML) | [`agents/first_ad/agent.py`](agents/first_ad/agent.py) — pre-emptive load-shed when Grafana ML forecasts a node's VRAM will breach threshold, via MCP |
+| Continuous profiling (Pyroscope) | [`agents/profiling.py`](agents/profiling.py) — the crew's own process, trace-linked, pushed via OTLP |
+| Sift second opinion | [`agents/technical_director/agent.py`](agents/technical_director/agent.py) — reconciles with any existing Sift investigation for the take window, via MCP |
+| On-call paging (IRM) | [`agents/first_ad/oncall_client.py`](agents/first_ad/oncall_client.py) — real escalation-chain page on a hardware failure, not just an incident |
+
+### Predictive VRAM forecasting with Grafana ML
+
+`brainbar_node_vram_percent` is already alerted on reactively (`simulator/grafana_provisioning/alert_rules.py`, threshold 90%) — this adds a forecast so First AD can act *before* that threshold is crossed, not after. GPU VRAM exhaustion is the single most common cause of render-farm job failure industry-wide, which is what makes forecasting it specifically (rather than, say, frame time) worth the setup:
+
+1. In the Grafana Cloud stack: **Administration → AI & Machine Learning → Metric Forecasts → New Forecast**.
+2. Name it exactly `brainbar_vram_forecast` (this literal name is hardcoded in `agents/first_ad/agent.py`'s instruction and in `simulator/grafana_provisioning/stage_health_dashboard.py`'s `VRAM_FORECAST_JOB_NAME` — keep both in sync if you rename it).
+3. Query: `max by (node) (brainbar_node_vram_percent)`. Forecast horizon: 10–15 minutes is enough to act on before the next take rolls.
+4. Once it's producing predictions, re-run `python -m simulator.grafana_provisioning.provision` — it looks up the resulting `grafanacloud-ml-metrics` datasource automatically and adds the actual-vs-forecast panel to the Stage Health dashboard. Without step 1–3 done first, provisioning still succeeds; it just skips that one panel and says why.
+
+First AD checks this every take (see its instruction) via `list_datasources` + `query_prometheus` against the forecast job's `:predicted` series — no new MCP tool needed, forecasts are just another Prometheus metric once the job exists.
+
+### Continuous profiling with Pyroscope
+
+Metrics/logs/traces establish *that* something was slow; profiling establishes *why*, at the function level. `agents/profiling.py` pushes the crew's own process to Grafana Cloud Pyroscope and links it to the same OTel traces `agents/observability.py` already exports, so a slow span in Tempo opens straight into a flamegraph.
+
+1. In the Grafana Cloud stack: **Connections → Add new connection → Pyroscope**, or reuse an existing one — note its push URL, instance ID, and a scoped API key (`profiles:write`).
+2. Set `PYROSCOPE_SERVER_ADDRESS`, `PYROSCOPE_INSTANCE_ID`, `PYROSCOPE_API_KEY` in `.env` (separate credentials from the OTLP ones above — Pyroscope is a distinct product/endpoint on the same stack).
+3. `pip install -r agents/requirements.txt` pulls in `pyroscope-io` + `pyroscope-otel`. **Windows note**: `pyroscope-io` is a Rust extension with prebuilt wheels for Linux/macOS only as of this writing — a Windows dev machine needs a Rust toolchain on `PATH` to build it from source, or run the crew under WSL/Docker instead. This does not affect the deployed Cloud Run image, which builds on Linux and installs the prebuilt wheel normally. If the package isn't importable, `agents/profiling.py` logs a warning and disables profiling rather than crashing the crew.
+4. In Grafana Explore, open a slow trace span from the `brainbar-crew` service and use **Trace to profiles** to jump straight to its flamegraph.
+
+### Sift as a second opinion
+
+Grafana Sift is Grafana Cloud's own ML-powered diagnostic assistant (error-log spikes, overloaded nodes, related config changes). The Grafana MCP server exposes tools to *read* Sift investigations (`list_sift_investigations`, `get_sift_investigation`, `get_sift_analysis`) but none to *start* one — so Technical Director checks for and reconciles with whatever investigation already exists for the take window, rather than fabricating a "run investigation" tool call that doesn't exist. To have one exist during a demo, start it manually from Grafana Explore (**+ Add → Run investigation**) or the ML app around the fault window before rolling that take. Grafana's own auto-trigger-on-incident-creation only fires for Kubernetes-backed data (this stage isn't Kubernetes), so it isn't relied on here.
+
+### Paging on-call through Grafana Cloud IRM
+
+Today, a hardware failure gets a Grafana incident and an annotation — both things you have to be looking at Grafana to see. This adds a real page:
+
+1. In the Grafana Cloud stack: **Alerting & IRM → Integrations → New integration → Webhook**. Attach it to an escalation chain and on-call schedule (or create a simple one-person schedule for demo purposes).
+2. Copy the integration's inbound webhook URL into `GRAFANA_ONCALL_WEBHOOK_URL` in `.env`.
+3. On `node_down`, First AD now calls `page_oncall` (`agents/first_ad/oncall_client.py`) in addition to opening the incident — a real page through the escalation chain, grouped by node (`alert_uid`) so repeated failures on the same node re-fire one alert instead of paging on every occurrence.
+
+Without step 1–2, `page_oncall` fails gracefully (logged in the ActionLog as a failed action with the reason, per First AD's rule 6 — never silently dropped) rather than blocking the rest of First AD's actions.
 
 ### Enabling Grafana Cloud's AI Observability app
 

@@ -70,6 +70,23 @@ class AgentsConfig(BaseSettings):
     brainbar_version: str = "dev"
     deployment_environment: str = "production"
 
+    # --- Grafana Pyroscope (continuous profiling — see agents/profiling.py) ---
+    pyroscope_enabled: bool = True
+    # Find these under your Grafana Cloud stack's "Connections -> Add new connection ->
+    # Pyroscope" page (the same place OTLP's instance id/API key live for that stack's
+    # OTLP endpoint) — a Pyroscope stack has its own separate instance id/push URL from
+    # the Mimir/Loki/Tempo one above, and its own scoped API key (profiles:write).
+    pyroscope_server_address: str = ""
+    pyroscope_instance_id: str = ""
+    pyroscope_api_key: str = ""
+
+    # --- Grafana Cloud IRM on-call paging (see agents/first_ad/oncall_client.py) ---
+    # The inbound webhook URL for a Grafana Cloud IRM integration wired to a real
+    # escalation chain/on-call schedule — created once in the portal (Alerting & IRM ->
+    # Integrations -> New integration -> Webhook), not provisionable from this repo
+    # since the URL embeds a per-integration secret token.
+    grafana_oncall_webhook_url: str = ""
+
     # TEMPORARY: this project's Pro-tier Dynamic Shared Quota is currently exhausted
     # and not eligible for a self-service increase (confirmed in Cloud Console), so
     # every hero-coverage/fault-active take that routes to Pro fails outright rather

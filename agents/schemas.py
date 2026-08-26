@@ -103,6 +103,8 @@ class ActionType(StrEnum):
     SILENCE_ALERT = "silence_alert"
     RESOLVE_INCIDENT = "resolve_incident"
     ANNOTATE_DASHBOARD = "annotate_dashboard"
+    PREVENTIVE_LOAD_SHED = "preventive_load_shed"
+    PAGE_ONCALL = "page_oncall"
 
 
 class Action(BaseModel):

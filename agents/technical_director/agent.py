@@ -8,7 +8,12 @@ exact timecodes, node IDs, and metric values — never a vague "something was wr
 Before diagnosing, it also searches its own crew's annotation history (get_annotations)
 for prior verdicts on the same node/metric — a live, self-written playbook instead of a
 static runbook file, since every past take's First-AD annotation already lives in this
-same Grafana Cloud stack.
+same Grafana Cloud stack. It also checks for an existing Grafana Sift investigation
+overlapping the take window and reconciles with it — Sift is Grafana Cloud's own
+ML-powered diagnostic assistant, run independently (via Explore or the ML app; the
+Grafana MCP server exposes no tool to start one, only to read existing ones), so this
+is a second, independent opinion the crew consults rather than one it can trigger
+itself.
 """
 from __future__ import annotations
 
@@ -39,6 +44,7 @@ GRAFANA_TOOL_FILTER = [
     "get_dashboard_summary",
     "list_sift_investigations",
     "get_sift_investigation",
+    "get_sift_analysis",
     "get_annotations",
     "grafana_api_request",
 ]
@@ -120,6 +126,18 @@ S4-12" is a stronger statement than rediscovering the same fault from scratch ev
 time). If get_annotations returns nothing relevant or the call fails, proceed with the
 workflow below unaffected — this is supporting context, not a blocker.
 
+Second opinion (Grafana Sift): call list_sift_investigations for recent investigations,
+and check whether any overlap this take's time window. If one does, call
+get_sift_investigation and get_sift_analysis to see what Grafana's own diagnostic
+assistant found (error log spikes, overloaded nodes, related config changes). Reconcile
+it with your own findings explicitly in your summary: say so if it agrees with your
+root cause ("Sift's own investigation independently flagged the same node"), and say so
+just as explicitly if it doesn't — Sift's checks are general-purpose, not written for
+this stage's specific metrics, so a mismatch is expected sometimes and is not itself
+evidence you're wrong. No Sift tool starts an investigation on demand — if none exists
+for this window, say that plainly and proceed with the workflow below unaffected; this
+is supporting context, not a blocker.
+
 Workflow:
 1. Use the literal datasource uids given above directly — no discovery call needed.
 2. Query frame time (p95 and max) and frame-drop count per node, scoped to the take
@@ -132,7 +150,8 @@ Workflow:
 5. Decide `clean`: true only if there were zero dropped frames, no sync loss, and no
    sustained threshold breach in the window.
 6. Write a one-paragraph `summary` a technical supervisor could read aloud on set,
-   citing matching precedent from the playbook step above when there is one.
+   citing matching precedent from the playbook step above and reconciling with any
+   Sift investigation found, whenever either applies.
 
 Report your findings as the required structured TechnicalVerdict. Be specific — cite
 real numbers and timecodes from your queries, never approximate language like "some

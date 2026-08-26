@@ -4,10 +4,9 @@ through this helper and gets back the structured Pydantic object it declared as 
 """
 from __future__ import annotations
 
+import re
 import uuid
 from typing import TypeVar
-
-import re
 
 from google.adk.agents import LlmAgent
 from google.adk.runners import Runner
@@ -22,8 +21,12 @@ from agents.observability import (
     record_hallucinated_tool_call,
     record_model_call_error,
 )
+from agents.profiling import init_profiling
 
 init_observability()
+# Must run after init_observability(): it attaches a span processor to the global
+# TracerProvider that call already installed (see agents/profiling.py's docstring).
+init_profiling()
 
 _session_service = InMemorySessionService()
 
