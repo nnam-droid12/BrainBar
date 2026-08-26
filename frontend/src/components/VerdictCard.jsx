@@ -1,3 +1,5 @@
+import { actionMeta } from '../actionTypes.js'
+
 export default function VerdictCard({ take }) {
   if (!take) {
     return (
@@ -61,6 +63,11 @@ export default function VerdictCard({ take }) {
             {technical?.clean ? 'Clean' : 'Issue detected'} · model: {technical?.model_tier_used}
           </p>
           <p className="muted small">{technical?.summary}</p>
+          {technical?.sift_checked && (
+            <p className={`sift-chip ${technical.sift_investigation_found ? 'sift-found' : 'sift-none'}`}>
+              {technical.sift_investigation_found ? '🔎 Sift second opinion:' : '🔎 Sift checked —'} {technical.sift_note}
+            </p>
+          )}
         </div>
         <div className="evidence-block">
           <h4>Creative — Continuity</h4>
@@ -81,11 +88,17 @@ export default function VerdictCard({ take }) {
         <div className="verdict-card-actions">
           <h4>First AD actions</h4>
           <ul>
-            {take.action_log.actions.map((a, i) => (
-              <li key={i}>
-                <span className="action-type">{a.type}</span> — {a.rationale}
-              </li>
-            ))}
+            {take.action_log.actions.map((a, i) => {
+              const meta = actionMeta(a.type)
+              return (
+                <li key={i}>
+                  <span className={`action-type action-type-${meta.variant}`}>
+                    {meta.icon} {meta.label}
+                  </span>{' '}
+                  — {a.rationale}
+                </li>
+              )
+            })}
           </ul>
         </div>
       )}

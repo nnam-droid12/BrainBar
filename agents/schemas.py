@@ -47,6 +47,12 @@ class TechnicalVerdict(BaseModel):
     peak_genlock_drift_us: float | None = None
     summary: str
     model_tier_used: ModelTier
+    # Grafana Sift second opinion (see agents/technical_director/agent.py) — structured
+    # so the frontend can show it as its own element instead of hoping it's mentioned
+    # in `summary`'s free text.
+    sift_checked: bool = False
+    sift_investigation_found: bool = False
+    sift_note: str = ""
 
 
 # --- Continuity ---------------------------------------------------------------------

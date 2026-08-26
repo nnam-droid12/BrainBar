@@ -418,6 +418,63 @@ main {
   font-family: var(--font-mono);
   color: var(--blue);
 }
+.action-type-predictive {
+  color: var(--accent);
+  font-weight: 600;
+}
+.action-type-reactive {
+  color: var(--red);
+}
+.sift-chip {
+  font-size: 0.78rem;
+  margin: 0.35rem 0 0;
+  font-family: var(--font-mono);
+}
+.sift-found {
+  color: var(--accent);
+}
+.sift-none {
+  color: var(--text-muted);
+}
+
+/* --- grafana capabilities legend --------------------------------------------------------- */
+
+.grafana-capabilities {
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border);
+}
+.grafana-capabilities-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+.grafana-capabilities-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+.grafana-capability {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-bright);
+  font-size: 0.78rem;
+  cursor: default;
+}
+.grafana-capability-icon {
+  font-size: 0.9rem;
+}
+.grafana-capabilities-link {
+  display: inline-block;
+  margin-top: 0.6rem;
+  font-size: 0.8rem;
+  color: var(--blue);
+}
 
 /* --- coverage map --------------------------------------------------------- */
 

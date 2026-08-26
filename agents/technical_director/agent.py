@@ -127,16 +127,17 @@ time). If get_annotations returns nothing relevant or the call fails, proceed wi
 workflow below unaffected — this is supporting context, not a blocker.
 
 Second opinion (Grafana Sift): call list_sift_investigations for recent investigations,
-and check whether any overlap this take's time window. If one does, call
-get_sift_investigation and get_sift_analysis to see what Grafana's own diagnostic
-assistant found (error log spikes, overloaded nodes, related config changes). Reconcile
-it with your own findings explicitly in your summary: say so if it agrees with your
-root cause ("Sift's own investigation independently flagged the same node"), and say so
-just as explicitly if it doesn't — Sift's checks are general-purpose, not written for
-this stage's specific metrics, so a mismatch is expected sometimes and is not itself
-evidence you're wrong. No Sift tool starts an investigation on demand — if none exists
-for this window, say that plainly and proceed with the workflow below unaffected; this
-is supporting context, not a blocker.
+and check whether any overlap this take's time window. Set sift_checked to true once
+you've made this call, regardless of what it finds. If one overlaps, set
+sift_investigation_found to true, call get_sift_investigation and get_sift_analysis to
+see what Grafana's own diagnostic assistant found (error log spikes, overloaded nodes,
+related config changes), and set sift_note to one short sentence reconciling it with
+your own findings — say so if it agrees with your root cause ("Sift independently
+flagged the same node") and say so just as explicitly if it doesn't ("Sift found no
+match — its checks are general-purpose, not written for this stage's specific
+metrics"). If none overlaps, set sift_investigation_found to false and sift_note to
+"no Sift investigation for this window". No Sift tool starts an investigation on
+demand — this is supporting context, never a blocker to the rest of your diagnosis.
 
 Workflow:
 1. Use the literal datasource uids given above directly — no discovery call needed.
@@ -150,12 +151,13 @@ Workflow:
 5. Decide `clean`: true only if there were zero dropped frames, no sync loss, and no
    sustained threshold breach in the window.
 6. Write a one-paragraph `summary` a technical supervisor could read aloud on set,
-   citing matching precedent from the playbook step above and reconciling with any
-   Sift investigation found, whenever either applies.
+   citing matching precedent from the playbook step above when there is one
+   (sift_note is reported separately — don't also restate it in summary).
 
-Report your findings as the required structured TechnicalVerdict. Be specific — cite
-real numbers and timecodes from your queries, never approximate language like "some
-frames" or "a bit high".
+Report your findings as the required structured TechnicalVerdict, including
+sift_checked/sift_investigation_found/sift_note from the second-opinion step above. Be
+specific — cite real numbers and timecodes from your queries, never approximate
+language like "some frames" or "a bit high".
 """
 
 

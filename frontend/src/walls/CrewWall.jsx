@@ -1,7 +1,9 @@
 import CrewHealthPanel from '../components/CrewHealthPanel.jsx'
+import GrafanaCapabilities from '../components/GrafanaCapabilities.jsx'
 import { AGENTS } from '../crewStatus.js'
 
 const LATENCY_BUDGET_MS = Number(import.meta.env.VITE_LATENCY_BUDGET_MS || 15000)
+const GRAFANA_BASE = import.meta.env.VITE_GRAFANA_BASE_URL
 
 function LatencyBar({ take }) {
   const ms = take.verdict?.latency_ms ?? 0
@@ -43,6 +45,7 @@ export default function CrewWall({ stream }) {
             </span>
           ))}
         </div>
+        <GrafanaCapabilities grafanaBaseUrl={GRAFANA_BASE} />
       </div>
 
       <div className="wall-col wall-col-main">
