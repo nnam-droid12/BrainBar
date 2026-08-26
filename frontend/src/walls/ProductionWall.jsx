@@ -52,7 +52,7 @@ export default function ProductionWall({ stream }) {
 
         <div className="wall-col wall-col-side">
           <OnboardingStrip />
-          <DemoControls />
+          <DemoControls stream={stream} />
           <CoverageMap scene={scene} coverageOwed={coverageOwed} />
           <TakeTimeline takes={takes} takesById={takesById} selectedId={selectedId} onSelect={setSelectedId} />
         </div>

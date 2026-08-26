@@ -590,6 +590,62 @@ main {
   margin: 0.4rem 0 0;
 }
 
+.demo-scenario {
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.demo-scenario-button {
+  width: 100%;
+  font-family: var(--font-sans);
+  font-size: 0.88rem;
+  font-weight: 700;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+  cursor: pointer;
+}
+.demo-scenario-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.demo-scenario-log {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.demo-scenario-step {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  font-size: 0.82rem;
+}
+.demo-scenario-step p {
+  margin: 0.1rem 0 0;
+}
+.demo-scenario-icon {
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+.demo-scenario-pending {
+  opacity: 0.45;
+}
+.demo-scenario-running .demo-scenario-icon {
+  animation: pulse 1s ease-in-out infinite;
+}
+.demo-scenario-done strong {
+  color: var(--green);
+}
+.demo-scenario-error strong,
+.demo-scenario-timeout strong {
+  color: var(--red);
+}
+
 /* --- incident banner --------------------------------------------------------- */
 
 .incident-banner {

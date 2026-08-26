@@ -117,6 +117,39 @@ The Crew Health dashboard stays in the repo regardless — it's dashboards-as-co
 (reviewable, versioned, provisioned by `provision.py`) covering the same signal, so the
 demo doesn't depend on a portal toggle having been clicked correctly beforehand.
 
+## Running the judge demo
+
+The Production Wall's **🎬 Run demo scenario** button (`frontend/src/components/DemoControls.jsx`)
+drives a scripted, escalating 3-take run — one click instead of several manual arm/roll/cut
+cycles under demo pressure — narrated live in its own log as each step lands:
+
+1. **Clean plate, no fault** (setup 4) — baseline: all five agents confirm a clean take fast.
+2. **VRAM spike on node-3** (setup 2) — Technical Director's annotation-history playbook and
+   Sift second-opinion check both run here; First AD's VRAM-forecast check runs on every
+   take regardless, but this is the one likely to actually trip it.
+3. **Node death on node-6** (setup 3) — the full incident path: Grafana incident opened,
+   on-call paged, alert storm silenced, node drained. Watch the incident banner flip from
+   red to handled.
+
+It finishes by wrapping the shoot (dailies + report). Each step waits for that take's
+`action_log` to land (up to 90s) before advancing, so it paces itself to real Gemini/Grafana
+latency rather than a fixed timer — if a step times out or errors it says so in the log and
+still moves on, rather than leaving the demo stuck.
+
+**Before judges arrive**, three of the four setup steps above are things the scenario itself
+can't do for you:
+- Predictive VRAM forecasting only shows a real prediction if the Grafana ML forecast job
+  has actual climbing-VRAM history to learn from — run the simulator (or the scenario's
+  step 2) a few times beforehand so it has something to train on.
+- A Sift second opinion only exists if you started one from Grafana Explore before that take
+  cuts (see the Sift section above) — otherwise Technical Director correctly reports none
+  found, which is honest but less impressive on camera.
+- On-call paging needs the IRM webhook integration configured (see above) or `page_oncall`
+  will report a failed action with the reason, rather than silently doing nothing.
+
+Continuous profiling and the Grafana capabilities legend on the Crew Wall need no pre-demo
+step — they're either always running or always visible from page load.
+
 ## Repository layout
 
 ```
