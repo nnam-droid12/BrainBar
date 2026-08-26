@@ -81,6 +81,32 @@ def build_alert_rules(prom_uid: str) -> list[dict]:
             summary="Genlock drift has exceeded 500us — wall sync is degrading and takes may show tearing.",
             severity="critical",
         ),
+        _threshold_rule(
+            title="BrainBar: Pro-tier quota errors",
+            prom_uid=prom_uid,
+            expr='sum(increase(brainbar_crew_model_call_errors_total{code="429"}[10m]))',
+            gt=0,
+            for_="10s",
+            summary=(
+                "The crew hit a 429 on a Gemini Pro call in the last 10 minutes — the "
+                "self-governing routing loop (agents/supervisor/quota_check.py) should "
+                "already be downgrading new takes to Flash, but quota may need attention."
+            ),
+            severity="warning",
+        ),
+        _threshold_rule(
+            title="BrainBar: agent hallucinated a tool call",
+            prom_uid=prom_uid,
+            expr="sum(increase(brainbar_crew_hallucinated_tool_calls_total[10m]))",
+            gt=0,
+            for_="10s",
+            summary=(
+                "An agent called a tool name outside its declared tool list in the last "
+                "10 minutes — check the Hallucinated tool calls panel on Crew Health for "
+                "which agent and tool, and tighten that agent's instruction."
+            ),
+            severity="warning",
+        ),
     ]
 
 

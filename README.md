@@ -51,6 +51,33 @@ Every row below is a real, runtime call — not a name-drop. File paths point at
 | AI Observability | [`agents/observability.py`](agents/observability.py) — the crew's own Gemini/MCP call telemetry, exported as OTLP |
 | Grafana MCP server | [`agents/mcp_client.py`](agents/mcp_client.py) — the single connection point every call above goes through; ADK discovers the live tool set at runtime, nothing is hardcoded |
 | Dashboards/alerts as code | [`simulator/grafana_provisioning/`](simulator/grafana_provisioning/) — Stage Health + Crew Health dashboards and 3 alert rules, provisioned via the Grafana HTTP API |
+| Annotation history as playbook | [`agents/technical_director/agent.py`](agents/technical_director/agent.py) — `get_annotations` search over past `brainbar-verdict` annotations before diagnosing a new fault, via MCP |
+| Token cost governance | [`agents/pricing.py`](agents/pricing.py) — estimated $ per agent per take, on the Crew Health dashboard and in the frontend |
+| Hosted OAuth MCP (demo) | [`scripts/demo_hosted_oauth_mcp.md`](scripts/demo_hosted_oauth_mcp.md) — the interactive "authorize as yourself" Cloud MCP path, alongside the unattended OSS+IAM path used in deployment |
+
+### Enabling Grafana Cloud's AI Observability app
+
+`agents/observability.py` already exports everything the crew does as OpenTelemetry
+GenAI-semantic-convention telemetry (token usage, per-agent invocation duration,
+per-tool-call duration, tagged with `service.name`/`service.version`/
+`deployment.environment`) to the same Grafana Cloud OTLP endpoint the Stage Simulator
+uses. That's the exact signal Grafana Cloud's built-in **AI Observability** app (per-
+agent reports, AI-generated analysis, token cost per step) is built to read — but
+installing that app on a stack is a Grafana Cloud portal action, not something this
+repo's service-account token is scoped to do via API:
+
+1. In the Grafana Cloud stack used by `GRAFANA_CLOUD_STACK_URL`: **Administration →
+   Apps → AI Observability** (search "AI" if it's not pinned) → **Enable**.
+2. Give it a few minutes after the next take cuts — it backfills from the OTLP data
+   already arriving, no re-instrumentation needed.
+3. Cross-check against `simulator/grafana_provisioning/crew_health_dashboard.py` (the
+   "Crew Health" dashboard this repo provisions itself): if a panel there shows data but
+   the AI Observability app doesn't, the app is either not yet enabled or is reading a
+   different stack than `GRAFANA_CLOUD_STACK_URL`.
+
+The Crew Health dashboard stays in the repo regardless — it's dashboards-as-code
+(reviewable, versioned, provisioned by `provision.py`) covering the same signal, so the
+demo doesn't depend on a portal toggle having been clicked correctly beforehand.
 
 ## Repository layout
 

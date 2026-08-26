@@ -565,6 +565,36 @@ main {
   font-size: 0.82rem;
 }
 
+/* --- crew trust strip --------------------------------------------------------- */
+
+.crew-trust-strip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  margin-bottom: 0.75rem;
+}
+.crew-trust-clean {
+  border: 1px solid var(--green);
+  background: rgba(74, 222, 128, 0.08);
+  color: var(--green);
+}
+.crew-trust-warn {
+  border: 1px solid var(--red);
+  background: rgba(255, 92, 92, 0.08);
+  color: var(--red);
+}
+.crew-trust-icon {
+  font-size: 1rem;
+}
+.crew-health-total-cost {
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
 /* --- dailies --------------------------------------------------------- */
 
 .dailies-report {

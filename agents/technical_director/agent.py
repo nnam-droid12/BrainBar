@@ -4,6 +4,11 @@ Heaviest Grafana user of the crew. Given a take window, it queries Mimir (PromQL
 Loki (LogQL), and Tempo through the live Grafana MCP server, correlates a metric
 spike with the trace span and log event that explain it, and reports evidence with
 exact timecodes, node IDs, and metric values — never a vague "something was wrong".
+
+Before diagnosing, it also searches its own crew's annotation history (get_annotations)
+for prior verdicts on the same node/metric — a live, self-written playbook instead of a
+static runbook file, since every past take's First-AD annotation already lives in this
+same Grafana Cloud stack.
 """
 from __future__ import annotations
 
@@ -34,6 +39,7 @@ GRAFANA_TOOL_FILTER = [
     "get_dashboard_summary",
     "list_sift_investigations",
     "get_sift_investigation",
+    "get_annotations",
     "grafana_api_request",
 ]
 
@@ -102,6 +108,18 @@ error status on the root span. Use find_slow_requests (and grafana_api_request a
 the Tempo datasource for raw TraceQL if you need more precision) to locate the
 offending span.
 
+Playbook (institutional memory): before diagnosing, call get_annotations for the last
+7 days tagged "brainbar-verdict" on the brainbar-stage-health dashboard. These are
+every past take's First-AD-written verdict annotation — real prior incidents on this
+same stage, not a generic runbook. Skim them for a prior annotation naming the same
+node or the same metric you're about to investigate (e.g. a past genlock drift on the
+same device, or repeated VRAM saturation on the same node). If you find one, treat it
+as precedent: check whether this take shows the same pattern, and if so say so
+explicitly in your summary ("this matches the genlock drift on node-3 from take
+S4-12" is a stronger statement than rediscovering the same fault from scratch every
+time). If get_annotations returns nothing relevant or the call fails, proceed with the
+workflow below unaffected — this is supporting context, not a blocker.
+
 Workflow:
 1. Use the literal datasource uids given above directly — no discovery call needed.
 2. Query frame time (p95 and max) and frame-drop count per node, scoped to the take
@@ -113,7 +131,8 @@ Workflow:
    node, timecode, metric value, and threshold crossed.
 5. Decide `clean`: true only if there were zero dropped frames, no sync loss, and no
    sustained threshold breach in the window.
-6. Write a one-paragraph `summary` a technical supervisor could read aloud on set.
+6. Write a one-paragraph `summary` a technical supervisor could read aloud on set,
+   citing matching precedent from the playbook step above when there is one.
 
 Report your findings as the required structured TechnicalVerdict. Be specific — cite
 real numbers and timecodes from your queries, never approximate language like "some

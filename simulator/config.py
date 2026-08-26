@@ -39,6 +39,12 @@ class SimulatorConfig(BaseSettings):
     # budget line on the provisioned Crew Health dashboard.
     verdict_latency_budget_seconds: float = 15.0
 
+    # Mirrors agents/config.py's settings of the same name — used only to label the
+    # Crew Health dashboard's token-cost panels by model (see
+    # simulator/grafana_provisioning/crew_health_dashboard.py's _cost_expr).
+    gemini_pro_model: str = "gemini-2.5-pro"
+    gemini_flash_model: str = "gemini-2.5-flash"
+
     @property
     def otlp_headers(self) -> dict[str, str]:
         if not self.otlp_instance_id or not self.otlp_api_key:

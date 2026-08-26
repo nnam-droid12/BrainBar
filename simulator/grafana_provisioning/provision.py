@@ -47,7 +47,10 @@ def main() -> None:
         print(f"Stage Health dashboard: {client.stack_url}{result['url']}")
 
         crew_dashboard = build_crew_health_dashboard(
-            uids["prometheus"], config.verdict_latency_budget_seconds * 1000
+            uids["prometheus"],
+            config.verdict_latency_budget_seconds * 1000,
+            config.gemini_pro_model,
+            config.gemini_flash_model,
         )
         result = client.upsert_dashboard(crew_dashboard, FOLDER_UID)
         print(f"Crew Health dashboard: {client.stack_url}{result['url']}")

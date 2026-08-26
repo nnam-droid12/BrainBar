@@ -64,6 +64,11 @@ class AgentsConfig(BaseSettings):
     otlp_api_key: str = ""
 
     ai_observability_enabled: bool = True
+    # Reported as OTel resource attributes (see agents/observability.py) so Grafana
+    # Cloud's AI Observability app can group/filter crew telemetry by version and
+    # environment instead of lumping every deploy into one unlabeled series.
+    brainbar_version: str = "dev"
+    deployment_environment: str = "production"
 
     # TEMPORARY: this project's Pro-tier Dynamic Shared Quota is currently exhausted
     # and not eligible for a self-service increase (confirmed in Cloud Console), so
