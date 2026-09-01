@@ -15,7 +15,7 @@ app = FastAPI(title="BrainBar Backend")
 # The frontend is deployed on its own Cloud Run origin (a different hostname from the
 # backend), so browser fetch() calls to REST routes need explicit CORS — without this
 # the WebSocket stream still connects (browsers don't apply CORS to WebSockets), but
-# every REST call the cockpit makes (state hydration on load, demo controls) is
+# every REST call the frontend makes (state hydration on load, demo controls) is
 # silently blocked by the browser.
 app.add_middleware(
     CORSMiddleware,

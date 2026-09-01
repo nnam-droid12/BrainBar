@@ -1,5 +1,5 @@
 // Derives each crew agent's live status from the same WebSocket-driven take fields
-// the rest of the cockpit already renders — no separate "agent is working" event
+// the rest of the frontend already renders — no separate "agent is working" event
 // exists, but the pipeline is strictly sequential (see backend/routes/internal.py's
 // _on_cut), so the take's own state transitions double as the crew's.
 export const AGENTS = [

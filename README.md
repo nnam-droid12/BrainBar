@@ -156,7 +156,7 @@ step — they're either always running or always visible from page load.
 simulator/    Stage Simulator — emits real telemetry to Grafana Cloud
 agents/       The five-agent ADK crew
 backend/      FastAPI orchestration + mock stage-control API
-frontend/     React cockpit — light landing page + dashboard (Production Wall + Crew Wall)
+frontend/     React frontend — light landing page + dashboard (Production Wall + Crew Wall)
 assets/       Synthetic script, shot list, storyboards, call sheet
 deploy/       Cloud Run + Agent Engine deployment configs
 architecture/ Architecture + telemetry schema docs
@@ -201,7 +201,7 @@ npm run dev
 
 | Service | URL |
 |---|---|
-| Frontend (landing + cockpit) | https://brainbar-frontend-854441956422.us-central1.run.app |
+| Frontend (landing + dashboard) | https://brainbar-frontend-854441956422.us-central1.run.app |
 | Backend API | https://brainbar-backend-854441956422.us-central1.run.app |
 | Stage Simulator | https://brainbar-simulator-854441956422.us-central1.run.app |
 | Grafana MCP service | Cloud Run, IAM-protected (not public — agents authenticate with a Google ID token, see `agents/mcp_client.py`) |

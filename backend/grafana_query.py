@@ -1,8 +1,8 @@
-"""Direct, server-side Mimir queries for the cockpit's native charts.
+"""Direct, server-side Mimir queries for the frontend's native charts.
 
 This is deliberately separate from agents/mcp_client.py: that's the agent crew's tool
 path (ADK-discovered, used for reasoning). This is a plain HTTP query used only to feed
-chart data to the frontend — the cockpit can't call Grafana Cloud itself (the service
+chart data to the frontend — the frontend can't call Grafana Cloud itself (the service
 account token must never reach the browser), so the backend queries Mimir directly with
 the same token already used elsewhere for server-side Grafana access, and returns JSON.
 

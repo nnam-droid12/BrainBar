@@ -1,7 +1,7 @@
-"""Native chart data for the cockpit — real Mimir queries, no iframe.
+"""Native chart data for the frontend — real Mimir queries, no iframe.
 
 Grafana Cloud blocks iframe embedding of authenticated dashboards by design (no
-allow_embedding on Cloud stacks), so the cockpit renders its own charts from the same
+allow_embedding on Cloud stacks), so the frontend renders its own charts from the same
 underlying data instead of embedding Grafana's UI.
 """
 from __future__ import annotations

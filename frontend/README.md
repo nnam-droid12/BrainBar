@@ -1,4 +1,4 @@
-# Frontend — BrainBar cockpit
+# Frontend — BrainBar dashboard
 
 React + plain JavaScript (Vite), dark control-room UI with two live views over
 WebSocket: the **Production Wall** (verdict card, take timeline, coverage map,

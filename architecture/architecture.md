@@ -2,7 +2,7 @@
 
 BrainBar is four platform boundaries wired into one closed loop: a simulated LED-volume
 stage, Grafana Cloud, Google Cloud (Gemini Enterprise Agent Platform), and a
-presentation layer (FastAPI backend + React cockpit).
+presentation layer (FastAPI backend + React frontend).
 
 ## 1. Simulated LED-Volume Stage (`simulator/`)
 
@@ -69,7 +69,7 @@ exact model IDs in one place), routed per-take by the Supervisor.
 FastAPI backend (`backend/`) orchestrates the crew on every cut event
 (`agents/supervisor/orchestrate.py`), exposes REST reads for page reload, drives the
 mock stage-control plane the First AD calls, and streams every event live over
-WebSocket (`backend/websocket_manager.py`). The React cockpit (`frontend/`) is a light
+WebSocket (`backend/websocket_manager.py`). The React frontend (`frontend/`) is a light
 marketing landing page routing into a dark control-room dashboard with two live views:
 the Production Wall (verdict card, take timeline, coverage map, incident banner, demo
 controls, embedded Stage Health panel) and the Crew Wall (verdict latency vs. budget,
