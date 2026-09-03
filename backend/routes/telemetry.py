@@ -74,9 +74,16 @@ async def crew_telemetry() -> dict:
         model = r["metric"].get("gen_ai_request_model", "?")
         token_type = r["metric"].get("gen_ai_token_type", "?")
         value = float(r["value"][1])
-        by_agent.setdefault(agent, {"input": 0.0, "output": 0.0})[token_type] = (
-            by_agent[agent].get(token_type, 0.0) + value
-        )
+        # Assign the setdefault result to a name before reading through it — writing
+        # this as one statement (`by_agent.setdefault(...)[token_type] = by_agent[agent]...`)
+        # reads like the setdefault runs first since it's on the left, but Python
+        # evaluates the right-hand side before the left-hand side's subscript
+        # assignment, so by_agent[agent] was read before setdefault ever ran. Confirmed
+        # live: KeyError on the first metric row for any agent, every time — this only
+        # went unnoticed because no test had run two real takes with two distinct
+        # agents' token usage before.
+        agent_totals = by_agent.setdefault(agent, {"input": 0.0, "output": 0.0})
+        agent_totals[token_type] = agent_totals.get(token_type, 0.0) + value
         by_agent_model.setdefault(agent, {}).setdefault(model, {"input": 0.0, "output": 0.0})[
             token_type
         ] = value

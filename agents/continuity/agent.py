@@ -57,6 +57,17 @@ def _make_retrieval_tool(corpus_name: str):
     async def retrieve_production_documents(query: str) -> list[str]:
         """Retrieves relevant passages from the script, shot list, storyboards, and
         call sheet for the given query (e.g. "setup 1 intended framing and lens")."""
+        # A blank/whitespace query reaches here on setups with nothing to search for
+        # (confirmed live: setup 4, "clean plate — no actors", has no cues and no
+        # dialogue) — RAG Engine's own backend rejects an empty search_query with a
+        # raw 400 INVALID_ARGUMENT that nothing upstream catches, killing the whole
+        # take. Guard it here and hand the model something it can react to instead.
+        if not query or not query.strip():
+            return [
+                "No query was provided — retry with a specific, non-empty search "
+                "string naming the setup_id, e.g. \"setup 4 intended framing, lens, "
+                "movement, and coverage type\"."
+            ]
         response = await asyncio.to_thread(
             rag.retrieval_query,
             text=query,

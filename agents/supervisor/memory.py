@@ -81,6 +81,17 @@ async def record_note(
 
 async def recall_notes(query: str) -> list[str]:
     """Returns prior notes relevant to `query` (e.g. "node-6 VRAM problems" or "SC03 coverage")."""
+    # A blank/whitespace query reaches here when the model calls this tool without a
+    # specific angle in mind. Memory Bank's own backend rejects an empty search_query
+    # with a raw 400 INVALID_ARGUMENT that nothing upstream catches — confirmed live,
+    # this killed the whole take's Supervisor synthesis. Guard it here rather than
+    # ever sending Vertex AI a blank query.
+    if not query or not query.strip():
+        return [
+            "recall_notes was called with no query — retry with a specific search "
+            "string, e.g. a node id, scene/setup, or the kind of problem you're "
+            "checking for."
+        ]
     service = get_memory_service()
     response = await service.search_memory(app_name=APP_NAME, user_id=USER_ID, query=query)
     notes: list[str] = []
