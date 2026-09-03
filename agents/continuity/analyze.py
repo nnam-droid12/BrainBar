@@ -26,5 +26,11 @@ async def analyze_take(
         "Retrieve this setup's intended framing/lens/movement/coverage from the "
         "production documents and report a CreativeVerdict."
     )
-    raw_text, _tool_calls = await run_single_turn(agent, prompt, app_name="brainbar-continuity")
+    raw_text, _tool_calls = await run_single_turn(
+        agent,
+        prompt,
+        app_name="brainbar-continuity",
+        conversation_id=take_id,
+        conversation_title=f"{take_id} — Continuity",
+    )
     return parse_output(CreativeVerdict, raw_text)

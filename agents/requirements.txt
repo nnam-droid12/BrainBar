@@ -8,9 +8,18 @@ google-cloud-secret-manager
 mcp>=1.24,<2
 pydantic==2.13.4
 pydantic-settings==2.7.1
-opentelemetry-api==1.42.1
-opentelemetry-sdk==1.42.1
-opentelemetry-exporter-otlp-proto-http==1.42.1
+# sigil-sdk's OTLP exporters require opentelemetry-sdk~=1.44.0, above google-adk's
+# declared (conservative) <=1.42.1 ceiling — verified live that ADK's actual telemetry
+# setup, span/metric creation, and Runner(plugins=...) all work correctly against
+# 1.44.0; the ADK package pin is stricter than its real runtime requirement.
+opentelemetry-api==1.44.0
+opentelemetry-sdk==1.44.0
+opentelemetry-semantic-conventions==0.65b0
+opentelemetry-exporter-otlp-proto-http==1.44.0
+opentelemetry-exporter-otlp-proto-grpc==1.44.0
+# Agent Observability (agents/sigil_client.py) — conversation/generation/tool-call
+# telemetry with a purpose-built Grafana Cloud UI, richer than raw OTel GenAI metrics.
+sigil-sdk==0.9.3
 fastapi==0.141.1
 uvicorn==0.52.1
 httpx==0.28.1

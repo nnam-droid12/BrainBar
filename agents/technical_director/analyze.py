@@ -29,7 +29,11 @@ async def analyze_take(
         "Query Grafana for this take's telemetry and report a TechnicalVerdict."
     )
     raw_text, _tool_calls = await run_single_turn(
-        agent, prompt, app_name="brainbar-technical-director"
+        agent,
+        prompt,
+        app_name="brainbar-technical-director",
+        conversation_id=take_id,
+        conversation_title=f"{take_id} — Technical Director",
     )
     verdict = parse_output(TechnicalVerdict, raw_text)
     return verdict.model_copy(update={"model_tier_used": model_tier})

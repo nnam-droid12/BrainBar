@@ -243,6 +243,8 @@ exact import or call site.
 | Continuous profiling (Pyroscope) | [`agents/profiling.py`](agents/profiling.py), the crew's own process, trace-linked, pushed via OTLP |
 | Sift second opinion | [`agents/technical_director/agent.py`](agents/technical_director/agent.py), reconciles with any existing Sift investigation for the take window |
 | On-call paging (IRM) | [`agents/first_ad/oncall_client.py`](agents/first_ad/oncall_client.py), a real escalation-chain page on a hardware failure |
+| Agent Observability (Sigil) | [`agents/sigil_client.py`](agents/sigil_client.py), [`agents/runtime.py`](agents/runtime.py), every agent call and every tool call wrapped as a conversation/generation/tool-execution, grouped by take_id, with time-to-first-token and a GOOD/BAD pipeline-health rating per take |
+| Grafana Assistant self-diagnosis | [`agents/supervisor/self_diagnosis.py`](agents/supervisor/self_diagnosis.py), `ask_assistant` via MCP at wrap, the same natural-language investigation a human triggers from Slack, called programmatically and woven into the end-of-day report |
 
 ### Predictive VRAM forecasting with Grafana ML
 
@@ -323,29 +325,88 @@ Without steps 1 and 2, `page_oncall` fails gracefully, logged in the ActionLog a
 failed action with the reason, never silently dropped, rather than blocking the rest
 of First AD's actions.
 
+### Agent Observability with Sigil
+
+`agents/observability.py` exports raw OpenTelemetry GenAI-semantic-convention
+telemetry (token usage, per-agent invocation duration, per-tool-call duration) to the
+same Grafana Cloud OTLP endpoint the Stage Simulator uses — that keeps working
+regardless of anything below, and backs the Crew Health dashboard this repo provisions
+itself as code (`simulator/grafana_provisioning/crew_health_dashboard.py`).
+
+`agents/sigil_client.py` and `agents/runtime.py` add a second, richer layer on top,
+using Grafana's purpose-built `sigil-sdk` (the package backing the "AI Observability"
+app's Overview/Performance/Errors/Usage/Tools/Evaluation tabs) rather than only raw
+metrics:
+
+- Every agent call for a take is wrapped as a **generation** and grouped under one
+  **conversation** keyed by `take_id` — Continuity, Technical Director, Supervisor, and
+  First AD's calls for the same take all show up as one conversation, not four
+  unrelated log lines.
+- Every tool call any agent makes — Grafana MCP tools and plain Python function tools
+  alike — is wrapped as a **tool execution** by a Runner-level ADK plugin
+  (`_SigilToolPlugin` in `agents/runtime.py`, using `before_tool_callback` /
+  `after_tool_callback` / `on_tool_error_callback`), captured with its actual
+  input/output/duration and linked to the same conversation — click a tool call in the
+  Tools tab, see every take that used it, or the reverse.
+- **Time-to-first-token** is captured per generation (`set_first_token_at` on the first
+  event carrying real content), a second latency signal alongside the crew's own
+  verdict-latency budget metric.
+- At the end of every take's pipeline, `agents/sigil_client.py`'s
+  `rate_take_conversation` submits a GOOD/BAD rating for that take's conversation —
+  GOOD if the whole cut-to-verdict-to-actions pipeline completed, BAD if it hit an
+  unhandled error (an exhausted-retry 429, a malformed tool call). This is a simple
+  operational-health signal, not a reasoning-quality grade — Grafana Cloud's own
+  AI-judge evaluations (configured in the portal below) are better positioned to grade
+  whether a verdict was actually well-reasoned than a heuristic here could be.
+
+Setup (distinct credentials from OTLP above — different product surface, different
+access scope):
+
+1. In the Grafana Cloud stack: **Observability → AI Observability → Configuration**.
+   Copy the Agent Observability API endpoint into `SIGIL_ENDPOINT`.
+2. **Administration → Access Policies → Create access policy**, scope `sigil:write`.
+   Create a token under it. That token goes in `SIGIL_API_KEY`; the stack's instance ID
+   goes in `SIGIL_INSTANCE_ID`.
+3. To turn on AI-judge evaluations (the red/green pass/fail grading in the Evaluation
+   tab and conversation view): in the same AI Observability app, define an evaluator
+   against the `brainbar-crew` service — this is a Grafana Cloud portal action grading
+   captured conversation content, not something this repo's code can enable from the
+   outside, the same category of one-time setup as the AI Observability app enablement
+   below.
+
+Without `SIGIL_ENDPOINT`/`SIGIL_INSTANCE_ID`/`SIGIL_API_KEY` set, every call site above
+degrades to a no-op — logged once, never a hard failure — so the crew runs identically
+with or without this configured.
+
 ### Enabling Grafana Cloud's AI Observability app
 
-`agents/observability.py` already exports everything the crew does as OpenTelemetry
-GenAI-semantic-convention telemetry (token usage, per-agent invocation duration,
-per-tool-call duration, tagged with `service.name`, `service.version`, and
-`deployment.environment`) to the same Grafana Cloud OTLP endpoint the Stage Simulator
-uses. That is the exact signal Grafana Cloud's built-in AI Observability app (per-agent
-reports, AI-generated analysis, token cost per step) is built to read, but installing
-that app on a stack is a Grafana Cloud portal action, not something this repo's
-service-account token is scoped to do via API.
+Installing the AI Observability app itself on a stack (the container the Sigil data
+above and the raw OTel GenAI telemetry both feed) is also a portal action:
 
 1. In the Grafana Cloud stack used by `GRAFANA_CLOUD_STACK_URL`: Administration, Apps,
    AI Observability (search "AI" if it is not pinned), Enable.
-2. Give it a few minutes after the next take cuts. It backfills from the OTLP data
-   already arriving, no re-instrumentation needed.
-3. Cross-check against `simulator/grafana_provisioning/crew_health_dashboard.py` (the
-   Crew Health dashboard this repo provisions itself): if a panel there shows data but
-   the AI Observability app does not, the app is either not yet enabled or is reading a
+2. Give it a few minutes after the next take cuts. It backfills from the data already
+   arriving, no re-instrumentation needed.
+3. Cross-check against the Crew Health dashboard: if a panel there shows data but the
+   AI Observability app does not, the app is either not yet enabled or is reading a
    different stack than `GRAFANA_CLOUD_STACK_URL`.
 
-The Crew Health dashboard stays in the repo regardless. It is dashboards-as-code,
-reviewable, versioned, provisioned by `provision.py`, covering the same signal, so the
-demo does not depend on a portal toggle having been clicked correctly beforehand.
+The Crew Health dashboard stays in the repo regardless, dashboards-as-code, reviewable,
+versioned, provisioned by `provision.py`, so the demo does not depend on a portal
+toggle having been clicked correctly beforehand.
+
+### Closing the loop: the crew asking Grafana's own AI Assistant
+
+Grafana Cloud's AI Assistant is the same natural-language investigator a human triggers
+by tagging `@Grafana` in Slack and asking it to investigate an agent's recent
+performance. `agents/supervisor/self_diagnosis.py` calls the same capability
+programmatically at wrap, through the `ask_assistant` MCP tool, and its findings are
+woven into the Supervisor's end-of-day report (`agents/supervisor/end_of_day.py`) —
+observe (Sigil and OTel telemetry) into analyze (the Assistant's own investigation)
+into a surfaced recommendation for the humans running the stage, not an auto-applied
+change the crew makes to its own prompts mid-demo. If the tool call fails or has
+nothing substantive to report, the report simply omits that line rather than
+fabricating a plausible-sounding finding.
 
 ## Gemini and ADK Features Used
 

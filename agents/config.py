@@ -66,6 +66,16 @@ class AgentsConfig(BaseSettings):
     otlp_api_key: str = ""
 
     ai_observability_enabled: bool = True
+
+    # --- Agent Observability (Sigil) ---
+    # A distinct product surface from the OTLP_* fields above: conversations, per-tool
+    # traces, and evaluations in Grafana Cloud's native AI Observability app, rather
+    # than raw OTel GenAI metrics on a hand-built dashboard. Needs its own Grafana
+    # Cloud Access Policy Token (scope sigil:write) and endpoint from the stack's
+    # Configuration page — see README's "Agent Observability (Sigil)" section.
+    sigil_endpoint: str = ""
+    sigil_instance_id: str = ""
+    sigil_api_key: str = ""
     # Reported as OTel resource attributes (see agents/observability.py) so Grafana
     # Cloud's AI Observability app can group/filter crew telemetry by version and
     # environment instead of lumping every deploy into one unlabeled series.

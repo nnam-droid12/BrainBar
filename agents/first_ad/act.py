@@ -31,6 +31,12 @@ async def act(
         f"Active render nodes this take: {', '.join(node_ids)}\n\n"
         "Take the appropriate actions and report the ActionLog."
     )
-    raw_text, _tool_calls = await run_single_turn(agent, prompt, app_name="brainbar-first-ad")
+    raw_text, _tool_calls = await run_single_turn(
+        agent,
+        prompt,
+        app_name="brainbar-first-ad",
+        conversation_id=verdict.take_id,
+        conversation_title=f"{verdict.take_id} — First AD",
+    )
     action_log = parse_output(ActionLog, raw_text)
     return action_log.model_copy(update={"take_id": verdict.take_id})

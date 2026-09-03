@@ -74,7 +74,13 @@ async def handle_cut(
         f"CreativeVerdict:\n{creative.model_dump_json(indent=2)}\n\n"
         "Synthesize the circle-take call."
     )
-    raw_text, _tool_calls = await run_single_turn(supervisor, prompt, app_name="brainbar-supervisor")
+    raw_text, _tool_calls = await run_single_turn(
+        supervisor,
+        prompt,
+        app_name="brainbar-supervisor",
+        conversation_id=take_id,
+        conversation_title=f"{take_id} — Supervisor synthesis",
+    )
     verdict = parse_output(TakeVerdict, raw_text)
 
     latency_ms = (time.monotonic() - t0) * 1000

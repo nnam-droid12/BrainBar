@@ -8,6 +8,7 @@ from google.adk.agents import LlmAgent
 from agents.config import config
 from agents.runtime import run_single_turn
 from agents.schemas import DailiesPackage, ModelTier, TakeVerdict
+from agents.supervisor.self_diagnosis import SelfDiagnosis
 
 INSTRUCTION = """\
 You are the Supervisor of an autonomous virtual-production crew, writing the
@@ -22,6 +23,11 @@ caught in the 4K deliverable weeks later — say plainly what that would have co
 reshoot time and stage-day rate, and that it didn't happen because of what the crew
 caught tonight. Be concrete, not generic; use the real verdict headlines you were
 given, not placeholder language.
+
+If a Grafana Assistant self-diagnosis is provided, close the report with one more
+sentence on it: what the crew's own AI Assistant investigation found about its recent
+performance, in plain English. If none is provided (investigated=false), don't mention
+the Assistant at all — no "no issues were found" filler for a check that didn't run.
 """
 
 
@@ -36,7 +42,10 @@ def build_agent(model_tier: ModelTier = ModelTier.PRO) -> LlmAgent:
 
 
 async def generate_report(
-    verdicts: list[TakeVerdict], dailies: DailiesPackage | None, model_tier: ModelTier = ModelTier.PRO
+    verdicts: list[TakeVerdict],
+    dailies: DailiesPackage | None,
+    model_tier: ModelTier = ModelTier.PRO,
+    self_diagnosis: SelfDiagnosis | None = None,
 ) -> str:
     agent = build_agent(model_tier)
     verdict_lines = "\n".join(
@@ -53,9 +62,20 @@ async def generate_report(
         if dailies
         else "Dailies not yet compiled."
     )
+    diagnosis_line = (
+        f"Grafana Assistant self-diagnosis: {self_diagnosis.suggestion}"
+        if self_diagnosis and self_diagnosis.investigated
+        else "Grafana Assistant self-diagnosis: not run this session."
+    )
     prompt = (
         f"Today's takes:\n{verdict_lines}\n\n{coverage_line}\n{dailies_line}\n\n"
-        "Write the end-of-day report."
+        f"{diagnosis_line}\n\nWrite the end-of-day report."
     )
-    raw_text, _tool_calls = await run_single_turn(agent, prompt, app_name="brainbar-end-of-day")
+    raw_text, _tool_calls = await run_single_turn(
+        agent,
+        prompt,
+        app_name="brainbar-end-of-day",
+        conversation_id="end-of-day",
+        conversation_title="End of day report",
+    )
     return raw_text

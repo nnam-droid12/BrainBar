@@ -15,6 +15,7 @@ from fastapi import APIRouter
 
 from agents.first_ad.act import act
 from agents.narration import synthesize_verdict_audio
+from agents.sigil_client import rate_take_conversation
 from agents.supervisor.orchestrate import handle_cut
 from backend.state import state
 from backend.websocket_manager import manager
@@ -86,6 +87,7 @@ async def _run_cut_pipeline(payload: dict) -> None:
         message = f"{type(exc).__name__}: {exc}"[:300]
         state.set_error(take_id, message)
         await manager.broadcast("verdict_error", {"take_id": take_id, "error": message})
+        rate_take_conversation(take_id=take_id, success=False, comment=message)
 
 
 async def _on_slate(payload: dict) -> None:
@@ -172,6 +174,9 @@ async def _on_cut(payload: dict) -> None:
         }
     await manager.broadcast(
         "action_log", {"take_id": take_id, "action_log": action_log.model_dump(mode="json")}
+    )
+    rate_take_conversation(
+        take_id=take_id, success=True, comment="Pipeline completed: verdict synthesized, actions taken."
     )
 
 

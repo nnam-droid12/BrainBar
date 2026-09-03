@@ -3,6 +3,8 @@ is event-driven — see backend/routes/internal.py, which the Simulator posts to
 """
 from __future__ import annotations
 
+import logging
+
 import httpx
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -11,11 +13,13 @@ from agents.config import config as agents_config
 from agents.dit.compile import compile_dailies
 from agents.schemas import ModelTier
 from agents.supervisor.end_of_day import generate_report
+from agents.supervisor.self_diagnosis import investigate as investigate_self_diagnosis
 from backend.config import config
 from backend.state import state
 from backend.websocket_manager import manager
 
 router = APIRouter(prefix="/shoot", tags=["shoot"])
+_log = logging.getLogger(__name__)
 
 
 class StartShootRequest(BaseModel):
@@ -74,8 +78,14 @@ async def wrap_shoot() -> dict:
     )
     state.set_dailies(dailies)
 
+    try:
+        self_diagnosis = await investigate_self_diagnosis()
+    except Exception:
+        _log.exception("Grafana Assistant self-diagnosis failed (non-fatal, wrap continues)")
+        self_diagnosis = None
+
     report_tier = ModelTier.FLASH if agents_config.force_flash_only else ModelTier.PRO
-    report = await generate_report(verdicts, dailies, model_tier=report_tier)
+    report = await generate_report(verdicts, dailies, model_tier=report_tier, self_diagnosis=self_diagnosis)
 
     payload = {"dailies": dailies.model_dump(mode="json"), "report": report}
     await manager.broadcast("wrap", payload)

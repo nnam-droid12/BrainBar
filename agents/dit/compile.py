@@ -29,7 +29,13 @@ async def compile_dailies(
         for v, t in zip(verdicts, takes)
     )
     prompt = f"Scene {scene} wrapped. Takes this scene:\n{verdict_lines}\n\nCompile the DailiesPackage."
-    raw_text, _tool_calls = await run_single_turn(agent, prompt, app_name="brainbar-dit")
+    raw_text, _tool_calls = await run_single_turn(
+        agent,
+        prompt,
+        app_name="brainbar-dit",
+        conversation_id=f"wrap-{scene}",
+        conversation_title=f"{scene} — DIT dailies compile",
+    )
     package = parse_output(DailiesPackage, raw_text)
 
     # The model has no reliable access to wall-clock time — set it here, not in the prompt.
