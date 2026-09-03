@@ -22,6 +22,7 @@ from google.genai.errors import ClientError
 from pydantic import BaseModel
 from tenacity import RetryCallState, retry, retry_if_exception, stop_after_attempt, wait_exponential
 
+from agents.config import config
 from agents.observability import (
     init_observability,
     record_hallucinated_tool_call,
@@ -105,6 +106,7 @@ class _SigilToolPlugin(BasePlugin):
                 tool_name=tool.name,
                 conversation_id=self._conversation_id,
                 agent_name=self._agent_name,
+                agent_version=config.brainbar_version,
                 request_model=self._model,
                 request_provider="google",
                 include_content=True,
@@ -195,6 +197,12 @@ async def run_single_turn(
                 conversation_title=conversation_title,
                 user_id=user_id,
                 agent_name=agent.name,
+                # Without an explicit agent_version, Agent Observability derives one
+                # from the system prompt and won't create a new version on a tool
+                # change — confirmed live via the app's own version-tracking notice.
+                # config.brainbar_version is the same value already tagged on the raw
+                # OTel export (agents/observability.py) and Pyroscope (agents/profiling.py).
+                agent_version=config.brainbar_version,
                 model=ModelRef(provider="google", name=model),
                 system_prompt=getattr(agent, "instruction", "") or "",
             )

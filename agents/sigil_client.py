@@ -47,7 +47,7 @@ def get_sigil_client():
         )
         return None
 
-    from sigil_sdk import AuthConfig, Client, ClientConfig, ContentCaptureMode, GenerationExportConfig
+    from sigil_sdk import ApiConfig, AuthConfig, Client, ClientConfig, ContentCaptureMode, GenerationExportConfig
 
     _client = Client(
         ClientConfig(
@@ -60,6 +60,15 @@ def get_sigil_client():
                     basic_password=config.sigil_api_key,
                 ),
             ),
+            # ClientConfig.api is a *separate* endpoint from generation_export above —
+            # it's what submit_conversation_rating/get_conversation/the experiments API
+            # actually read (self._config.api.endpoint, not generation_export.endpoint).
+            # Its default is ApiConfig(endpoint="http://localhost:8080") — which happens
+            # to be BrainBar's own backend port — so leaving it unset doesn't fail loudly,
+            # it silently points every rating/experiments call at the wrong service.
+            # Confirmed live: this was the actual cause of every "connection refused" /
+            # timeout on rate_take_conversation, not a real Grafana Cloud issue.
+            api=ApiConfig(endpoint=config.sigil_endpoint),
             content_capture=ContentCaptureMode.FULL,
         )
     )
