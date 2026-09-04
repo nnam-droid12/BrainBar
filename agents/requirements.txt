@@ -1,5 +1,5 @@
-google-adk==2.6.3
-google-genai==2.17.0
+google-adk==2.8.0
+google-genai==2.22.0
 google-cloud-aiplatform[adk,agent-engines]
 google-cloud-documentai
 google-cloud-storage
@@ -8,15 +8,18 @@ google-cloud-secret-manager
 mcp>=1.24,<2
 pydantic==2.13.4
 pydantic-settings==2.7.1
-# sigil-sdk's OTLP exporters require opentelemetry-sdk~=1.44.0, above google-adk's
-# declared (conservative) <=1.42.1 ceiling — verified live that ADK's actual telemetry
-# setup, span/metric creation, and Runner(plugins=...) all work correctly against
-# 1.44.0; the ADK package pin is stricter than its real runtime requirement.
-opentelemetry-api==1.44.0
-opentelemetry-sdk==1.44.0
-opentelemetry-semantic-conventions==0.65b0
-opentelemetry-exporter-otlp-proto-http==1.44.0
-opentelemetry-exporter-otlp-proto-grpc==1.44.0
+# Deliberately NOT pinning opentelemetry-api/sdk/exporters here. sigil-sdk itself only
+# declares opentelemetry-api>=1.27.0 (no ceiling) — an earlier version of this comment
+# claimed sigil-sdk's OTLP exporters *require* ~=1.44.0 and pinned everything there,
+# which broke Cloud Build: a real `pip install -r` full resolve (unlike incrementally
+# upgrading packages in an already-populated local venv, which doesn't re-validate
+# everything at once) correctly rejected that against google-adk's own
+# opentelemetry-api<=1.42.1 ceiling — confirmed in the actual failed build log, and
+# still true as of the latest google-adk release (2.8.0), so bumping ADK doesn't help
+# either. Left unpinned, pip naturally resolves the whole opentelemetry-* family to
+# 1.42.1 — verified in a clean venv, both that it resolves without conflict and that
+# sigil-sdk's full Client/generation/tool-execution lifecycle actually works at that
+# version, not just that pip is satisfied.
 # Agent Observability (agents/sigil_client.py) — conversation/generation/tool-call
 # telemetry with a purpose-built Grafana Cloud UI, richer than raw OTel GenAI metrics.
 sigil-sdk==0.9.3
