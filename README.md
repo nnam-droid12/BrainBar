@@ -21,6 +21,7 @@
 
 - [The Problem](#the-problem)
 - [The Solution](#the-solution)
+- [Architectural Diagram](#architectural-diagram)
 - [A Take, End to End](#a-take-end-to-end)
 - [What Makes BrainBar Unique](#what-makes-brainbar-unique)
 - [Architecture](#architecture)
@@ -71,6 +72,10 @@ that exact take window, and takes real action on what it finds.
 | **Cost governance on set** | Every agent's real token cost is estimated in dollars and shown live, not buried as a raw token count nobody on set can size up at a glance. |
 | **Technical dailies** | A per-shot package with a Grafana deep-link for every take, delivered to editorial at wrap. |
 | **The crew watches itself** | Its own Gemini call latency, token cost, and MCP tool activity flow into the same Grafana Cloud stack it queries, and the Supervisor reads that data back before every take to stay inside an on-set latency budget and to detect its own recent quota errors before routing to a model tier likely to fail. |
+
+## Architectural Diagram
+
+![BrainBar architecture diagram](brainbar_architecture.png)
 
 ## A Take, End to End
 
