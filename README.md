@@ -24,6 +24,7 @@
 - [A Take, End to End](#a-take-end-to-end)
 - [What Makes BrainBar Unique](#what-makes-brainbar-unique)
 - [Architecture](#architecture)
+- [BrainBar as an MCP Server](#brainbar-as-an-mcp-server)
 - [The Take Pipeline](#the-take-pipeline)
 - [Agent and Tool Registry](#agent-and-tool-registry)
 - [Grafana Cloud Integration](#grafana-cloud-integration)
@@ -117,6 +118,9 @@ Cloud.
 | **Annotation history as a live playbook** | Technical Director searches its own crew's past verdict annotations before diagnosing a new fault, and cites precedent explicitly when it finds a match. | A static runbook file goes stale. Every past take's annotation already lives in the same Grafana Cloud stack being queried, so the playbook writes and updates itself. |
 | **Real on-call paging, not just an incident** | On a hardware failure, First AD pages a real escalation chain through Grafana Cloud Incident Response and Management, grouped by node so repeats do not re-page on every occurrence. | Opening an incident is the obvious action. Paging the person who actually needs to act on it, with the discipline to group repeats instead of flooding them, is the harder and more useful one. |
 | **Hallucination and quota self-governance** | The crew's own tool-call errors and 429 quota errors are exported as Grafana metrics, and the Supervisor reads them back before routing a take to a stronger model, downgrading automatically if recent errors suggest it will fail anyway. | Most agent demos treat reliability as someone else's problem. BrainBar's own past incident, an agent hallucinating a tool name that did not exist, is the reason this exists: it is a fix earned from a real failure, exported as a real Grafana signal, not a hypothetical safeguard. |
+| **Bidirectional MCP: BrainBar is also a server** | Every agent above is an MCP *client* of Grafana. `agents/mcp_server.py` is the other direction: BrainBar's own diagnosis exposed as MCP tools any external caller can invoke directly, deployed as its own IAM-protected Cloud Run service. | Almost every MCP integration only calls out. Once an agent's reasoning already sits behind a bounded, structured interface, exposing that same interface to the outside world is a few dozen lines, not a second product, and it is what turns a chat feature into infrastructure other agents can build on. |
+| **Hardware failures get reacted to in parallel, not in a queue** | When a render node dies mid-take, First AD's incident/drain/page response fires the instant the event arrives, running concurrently with the slower creative and technical analysis of the same take rather than waiting behind it. | The obvious architecture is one pipeline: analyze, then act. A dead node does not care what the creative verdict says, and waiting on a verdict that can take over a minute under load before draining a node that is actively failing is a real, measured latency bug, not a hypothetical one. |
+| **One evidence bar, no matter which model answers** | A single function checks that a not-clean verdict's cited issues are real (a real node, a real metric, a substantive root cause), applied identically whether Technical Director ran on Flash or Pro. | The easy version of a model fallback quietly ships whatever the cheaper model produces. Routing this through one shared check, called from one place, makes it structurally impossible for a quota-driven downgrade to lower the bar without anyone noticing. |
 
 ## Architecture
 
@@ -144,8 +148,8 @@ Grafana Cloud
   Machine Learning forecasts, Sift investigations, Pyroscope profiles,
     on-call escalation chains
        ^                                    |
-       |  query via MCP                     |  query via MCP
-       |                                    v
+       |  query via MCP (BrainBar as        |  query via MCP
+       |  a client of Grafana)              v
 Google Cloud / Gemini Enterprise Agent Platform (agents/)
   Supervisor (Gemini Pro) - synthesizes the circle-take call, self-governs
     routing, owns Memory Bank, deployed to Agent Engine as an independently
@@ -153,16 +157,23 @@ Google Cloud / Gemini Enterprise Agent Platform (agents/)
   Continuity (Flash) - grounded on RAG Engine + Vector Search over the
     script/shot-list/storyboard, parsed through Document AI
   Technical Director (Flash, Pro for hero/fault takes) - heaviest Grafana
-    user, diagnoses telemetry via Mimir/Loki/Tempo
-  First AD (Flash) - converts a verdict into consequences
+    user, diagnoses telemetry via Mimir/Loki/Tempo; every not-clean verdict
+    passes the same evidence-grounding gate regardless of which tier ran
+  First AD (Flash) - converts a verdict into consequences; a hardware
+    failure gets its own immediate reaction, concurrently with the
+    creative/technical analysis above, not queued behind it
   DIT (Flash) - compiles technical dailies, writes to Cloud Storage + BigQuery
-       |
-       v
-Presentation (backend/ + frontend/)
-  FastAPI backend orchestrates the crew on every cut event, streams every
-    event live over WebSocket, exposes REST reads for page reload
-  React frontend: a light landing page routing into a dark control-room
-    dashboard, Production Wall + Crew Wall
+       |                                    ^
+       |                                    |  MCP tool calls, straight into
+       v                                    |  analyze_take (bypasses backend/
+Presentation (backend/ + frontend/)         |  entirely): agents/mcp_server.py,
+  FastAPI backend orchestrates the crew     |  its own IAM-protected Cloud Run
+    on every cut event, streams every       |  service — BrainBar as a server
+    event live over WebSocket, exposes      |
+    REST reads for page reload              |
+  React frontend: a light landing page      |  Any external MCP-speaking caller
+    routing into a dark control-room        |  (Grafana's own Assistant, a
+    dashboard, Production Wall + Crew Wall  |  coding agent, another tool)
 ```
 
 **Two loops run through the same Grafana Cloud stack:**
@@ -179,6 +190,40 @@ Full detail: [architecture/architecture.md](architecture/architecture.md) and
 [architecture/telemetry-schema.md](architecture/telemetry-schema.md) (every metric,
 log, and span name the simulator emits and the crew queries).
 
+## BrainBar as an MCP Server
+
+Every integration described so far is BrainBar calling out to Grafana's MCP server.
+[`agents/mcp_server.py`](agents/mcp_server.py) is the other direction: the same
+diagnostic reasoning the cut pipeline runs internally, exposed as MCP tools any
+external caller can invoke directly.
+
+This works because Technical Director and Continuity already never return raw
+telemetry. `analyze_take` in both
+[`agents/technical_director/analyze.py`](agents/technical_director/analyze.py) and
+[`agents/continuity/analyze.py`](agents/continuity/analyze.py) queries Grafana itself
+and hands back one bounded, structured verdict, never a table dump. That is what makes
+handing the same function to an untrusted external caller safe to do at all — a caller
+gets a purpose-built answer, never a raw connection to Mimir or Loki.
+
+| Tool | What It Does |
+|---|---|
+| `diagnose_take_technical` | Runs Technical Director against one take's real Grafana telemetry (Mimir frame times/VRAM/drift, Loki stage events, Tempo dropped-frame traces) and returns a structured `TechnicalVerdict` — clean or not, cited issues with exact numbers, a summary. Always Flash tier: an on-demand diagnostic call, not a routed production take. |
+| `diagnose_take_creative` | Runs Continuity against one take: grounds it on the real script/shot-list/storyboard/call-sheet via RAG, cross-checks Loki for whether scripted cues fired, and returns whether it matches creative intent plus coverage still owed. |
+
+A coding agent, Grafana's own Assistant, or any other MCP-speaking tool can ask "is
+take X clean?" directly, no chat UI, no cut webhook, no dashboard required.
+
+**Access control.** This server is deliberately not mounted on the existing backend:
+that service is `--allow-unauthenticated` on purpose, since the frontend calls it
+directly from the browser. A tool surface the outside world can call needs real access
+control, so `agents/mcp_server.py` runs as its own Cloud Run service
+(`deploy/cloud-run/mcp-server/`), IAM-protected rather than public, the same pattern
+already used for the Grafana MCP proxy this crew itself authenticates to with a Google
+ID token (see [`agents/mcp_client.py`](agents/mcp_client.py)).
+
+Run it locally with `python -m agents.mcp_server` (streamable-HTTP transport on
+`:8000`, same transport the Grafana MCP server itself uses).
+
 ## The Take Pipeline
 
 Every take runs the same sequence, driven by the backend's response to the simulator's
@@ -187,10 +232,11 @@ slate and cut events.
 | Step | Actor | What Happens |
 |---|---|---|
 | 1 | Simulator | Posts `slate` on take start, `cut` on take end, directly to the backend webhook so the crew reacts within seconds, not on a polling delay. |
+| — | First AD (concurrent, on `node_down`) | Fires the instant a render node fails — independent of, and running in parallel with, the numbered sequence below, not queued behind it. Opens a Grafana incident, silences the alert storm, drains the node, and pages the real on-call escalation chain before a verdict exists, not after one. A zero-token check runs first: if the same node already triggered a reaction in the last 5 minutes, this is skipped entirely, so a flapping node cannot trigger a second full model call or re-page on-call for nothing new. |
 | 2 | Supervisor | Decides the model tier for this take (Flash for routine coverage, Pro for hero or fault-active takes) by reading its own recent verdict latency and quota-error telemetry back from Grafana first. |
-| 3 | Continuity + Technical Director | Run in parallel. Continuity grounds the take against the script, shot list, and storyboard, and checks Loki for whether scripted cues actually fired. Technical Director diagnoses the take's Mimir/Loki/Tempo telemetry, checks its own annotation history, and checks for a Sift second opinion. |
+| 3 | Continuity + Technical Director | Run in parallel. Continuity grounds the take against the script, shot list, and storyboard, and checks Loki for whether scripted cues actually fired. Technical Director diagnoses the take's Mimir/Loki/Tempo telemetry, checks its own annotation history, and checks for a Sift second opinion. Every not-clean verdict passes the same evidence-grounding check before it is returned — the same function regardless of whether Flash or Pro ran, so a quota-driven fallback cannot quietly ship a less-scrutinized verdict. |
 | 4 | Supervisor | Synthesizes both verdicts into one circle-take call, with reasoning and cited evidence, and writes anything worth remembering to Memory Bank. |
-| 5 | First AD | Converts the verdict into action: annotate, pre-stage a corrective take if warranted, and if a node went down, open an incident, drain the node, page on-call, and attempt to silence the alert storm. Also checks the VRAM forecast for every active node regardless of the verdict. |
+| 5 | First AD | Converts the verdict into action: annotate the dashboard, pre-stage a corrective take if warranted, and check the VRAM forecast for every active node. Told exactly what the concurrent reaction above already did, so a hardware failure never gets a second, redundant incident/alert/page/drain, or a redundant load-shed on the same node. |
 | 6 | DIT (at wrap) | Compiles the technical dailies package with a Grafana deep-link per shot, writes to Cloud Storage and BigQuery, and the Supervisor generates the end-of-day report. |
 
 ## Agent and Tool Registry
@@ -573,8 +619,10 @@ BrainBar/
 ├── agents/                        The five-agent ADK crew
 │   ├── config.py                    Every Gemini model ID, GCP resource, Grafana endpoint
 │   ├── schemas.py                   Pydantic contracts every agent returns
-│   ├── mcp_client.py                Single Grafana MCP connection point
-│   ├── runtime.py                   Shared ADK Runner/session boilerplate
+│   ├── mcp_client.py                Single Grafana MCP connection point (BrainBar as a client)
+│   ├── mcp_server.py                BrainBar's own diagnosis exposed as MCP tools (BrainBar as a server)
+│   ├── sigil_client.py              Grafana Agent Observability (Sigil) wiring
+│   ├── runtime.py                   Shared ADK Runner/session boilerplate, Sigil tool-call plugin
 │   ├── observability.py             Grafana AI Observability instrumentation
 │   ├── profiling.py                 Grafana Cloud Pyroscope instrumentation
 │   ├── pricing.py                   Gemini token cost estimation
