@@ -147,6 +147,17 @@ class _SigilToolPlugin(BasePlugin):
             _log.debug("Sigil: recorded tool result for %s", tool.name)
         except Exception:
             _log.exception("Sigil: set_result failed for %s (non-fatal)", tool.name)
+        finally:
+            # set_result() only stages the payload — end() is what actually finalizes
+            # the span (sets attributes/status, records duration metrics, and hands it
+            # to the exporter). Without this the span is started but never queued for
+            # export, which is exactly why Grafana Cloud's Tools tab showed zero
+            # executions despite start_tool_execution/set_result never raising —
+            # confirmed by tracing this to ToolExecutionRecorder.end()'s own source.
+            try:
+                rec.end()
+            except Exception:
+                _log.exception("Sigil: end() failed for tool %s (non-fatal)", tool.name)
         return None
 
     async def on_tool_error_callback(
@@ -159,6 +170,11 @@ class _SigilToolPlugin(BasePlugin):
                 rec.set_exec_error(error)
             except Exception:
                 _log.exception("Sigil: set_exec_error failed for %s (non-fatal)", tool.name)
+            finally:
+                try:
+                    rec.end()
+                except Exception:
+                    _log.exception("Sigil: end() failed for tool %s (non-fatal)", tool.name)
         return None
 
 
@@ -289,6 +305,21 @@ async def run_single_turn(
                 _log.debug("Sigil: recorded generation result for conversation=%s", conv_id)
             except Exception:
                 _log.exception("Sigil: set_result failed (non-fatal)")
+    finally:
+        # set_result()/set_call_error() above only stage state on the recorder —
+        # end() is what actually finalizes the span and queues the generation for
+        # export (see GenerationRecorder.end()'s own docstring: "Finalizes span and
+        # queues generation export"). Without this, nothing sent through
+        # run_single_turn ever reaches Grafana Cloud regardless of which branch ran —
+        # confirmed live: only a one-off smoke-test script that used `with` (whose
+        # __exit__ calls end() automatically) ever actually landed a conversation.
+        # Idempotent per the SDK's own contract ("safe to call multiple times"), so
+        # unconditional here is correct regardless of which branch above ran.
+        if sigil_gen is not None:
+            try:
+                sigil_gen.end()
+            except Exception:
+                _log.exception("Sigil: end() failed for generation (non-fatal)")
 
     return final_text, tool_calls
 

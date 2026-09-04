@@ -4,11 +4,25 @@ WebSocket.
 """
 from __future__ import annotations
 
+import logging
+
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.routes import faults, internal, shoot, stage, takes, telemetry
 from backend.websocket_manager import manager
+
+# Nothing in this codebase ever called logging.basicConfig — every _log.info/.debug
+# call across backend/ and agents/ (Sigil's own included) was silently dropped by
+# Python's default root-logger level (WARNING), only .exception/.error ever surfaced.
+# Confirmed live: a full take produced zero "Sigil:" log lines, success or failure,
+# because none of them could print, not because nothing happened.
+logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+# DEBUG specifically for the modules whose debug-level detail is actually worth
+# reading (Sigil's per-call tool/generation tracing) — global DEBUG would drown that
+# signal in every dependency's own verbose logging (httpx, grpc, urllib3, ...).
+logging.getLogger("agents.runtime").setLevel(logging.DEBUG)
+logging.getLogger("agents.sigil_client").setLevel(logging.DEBUG)
 
 app = FastAPI(title="BrainBar Backend")
 
