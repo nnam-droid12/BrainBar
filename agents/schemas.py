@@ -53,6 +53,11 @@ class TechnicalVerdict(BaseModel):
     sift_checked: bool = False
     sift_investigation_found: bool = False
     sift_note: str = ""
+    # Structural evidence-grounding gate (see analyze.py's _validate_evidence_grounding)
+    # — a code-level check every model tier is forced through, distinct from the async
+    # Grafana Agent Observability LLM-judge that grades the same thing.
+    evidence_validated: bool = True
+    evidence_validation_note: str = ""
 
 
 # --- Continuity ---------------------------------------------------------------------

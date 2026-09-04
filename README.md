@@ -245,6 +245,7 @@ exact import or call site.
 | On-call paging (IRM) | [`agents/first_ad/oncall_client.py`](agents/first_ad/oncall_client.py), a real escalation-chain page on a hardware failure |
 | Agent Observability (Sigil) | [`agents/sigil_client.py`](agents/sigil_client.py), [`agents/runtime.py`](agents/runtime.py), every agent call and every tool call wrapped as a conversation/generation/tool-execution, grouped by take_id, with time-to-first-token and a GOOD/BAD pipeline-health rating per take |
 | Grafana Assistant self-diagnosis | [`agents/supervisor/self_diagnosis.py`](agents/supervisor/self_diagnosis.py), `ask_assistant` via MCP at wrap, the same natural-language investigation a human triggers from Slack, called programmatically and woven into the end-of-day report |
+| BrainBar as an MCP server | [`agents/mcp_server.py`](agents/mcp_server.py), the crew's own diagnosis exposed the other direction: any MCP-speaking caller can ask `diagnose_take_technical`/`diagnose_take_creative` directly, bypassing the cut webhook and dashboard entirely. Deployed as its own IAM-protected Cloud Run service, same access-control pattern as the Grafana MCP proxy this crew already authenticates to |
 
 ### Predictive VRAM forecasting with Grafana ML
 

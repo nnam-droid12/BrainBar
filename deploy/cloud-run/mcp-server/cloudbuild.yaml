@@ -1,0 +1,41 @@
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - deploy/cloud-run/mcp-server/Dockerfile
+      - -t
+      - us-central1-docker.pkg.dev/$PROJECT_ID/brainbar/mcp-server
+      - .
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - brainbar-mcp-server
+      - --image=us-central1-docker.pkg.dev/$PROJECT_ID/brainbar/mcp-server
+      - --region=us-central1
+      - --platform=managed
+      # No --allow-unauthenticated: this serves the crew's own reasoning to any
+      # MCP-speaking caller, so unlike the frontend-facing backend it needs real access
+      # control — same IAM-protected pattern as brainbar-grafana-mcp, which this same
+      # crew already authenticates to with a Google ID token (see agents/mcp_client.py).
+      - --service-account=brainbar-runtime@$PROJECT_ID.iam.gserviceaccount.com
+      - --min-instances=0
+      - --max-instances=3
+      - --cpu=1
+      - --memory=1Gi
+      - --concurrency=40
+      # Matches the same env vars already used by the deployed backend
+      # (deploy/cloud-run/backend/cloudbuild.yaml) — this runs the same agents/
+      # package. Sigil/OTLP telemetry is intentionally left unset here, same as it
+      # is for that service today: agents/sigil_client.py and agents/observability.py
+      # both already degrade to a no-op without those credentials, and this server's
+      # own diagnostic tools don't depend on them to function.
+      - --set-env-vars=GOOGLE_CLOUD_PROJECT=$PROJECT_ID,GOOGLE_CLOUD_LOCATION=us-central1,GOOGLE_GENAI_USE_VERTEXAI=true,GRAFANA_MCP_MODE=oss,GRAFANA_MCP_URL=https://brainbar-grafana-mcp-854441956422.us-central1.run.app/mcp,GRAFANA_CLOUD_STACK_URL=https://sincerechowder2500.grafana.net,OTLP_ENDPOINT=https://otlp-gateway-prod-eu-central-0.grafana.net/otlp,OTLP_INSTANCE_ID=1771008
+      - --set-secrets=GRAFANA_SERVICE_ACCOUNT_TOKEN=brainbar-grafana-sa-token:latest
+      - --quiet
+images:
+  - us-central1-docker.pkg.dev/$PROJECT_ID/brainbar/mcp-server
+options:
+  logging: CLOUD_LOGGING_ONLY

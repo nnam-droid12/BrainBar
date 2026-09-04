@@ -6,6 +6,58 @@ from agents.schemas import ModelTier, TechnicalVerdict
 from agents.technical_director.agent import build_agent
 
 
+def _validate_evidence_grounding(verdict: TechnicalVerdict) -> TechnicalVerdict:
+    """Cheap, deterministic gate every model tier is forced through after parsing —
+    the code-level counterpart to the Grafana Agent Observability LLM-judge rubric
+    (brainbar.td_evidence_grounding), but with no extra model call, so a Flash
+    fallback under Pro quota pressure can't quietly ship a less-scrutinized verdict
+    than Pro would have. Same function, same bar, regardless of which tier ran —
+    called unconditionally here rather than duplicated per call site, so there's no
+    second copy of the check to forget to update.
+
+    Checks the *structured* TechnicalIssue fields the schema already requires are
+    real values, not just present-but-empty: a verdict that says clean=false but
+    reports an issue with a blank node/metric or a one-word root_cause is exactly the
+    "conclusion not backed by data" failure mode the online evaluator grades for —
+    caught here for free, before the take ever reaches a human or a dashboard.
+    """
+    if verdict.clean:
+        return verdict.model_copy(update={"evidence_validated": True})
+
+    if not verdict.issues:
+        return verdict.model_copy(
+            update={
+                "evidence_validated": False,
+                "evidence_validation_note": (
+                    "clean=false but no issues were reported — a not-clean verdict "
+                    "needs at least one cited issue."
+                ),
+            }
+        )
+
+    hollow = [
+        issue
+        for issue in verdict.issues
+        if not issue.node.strip()
+        or not issue.metric.strip()
+        or len(issue.root_cause.strip()) < 10
+        or len(issue.description.strip()) < 10
+    ]
+    if hollow:
+        return verdict.model_copy(
+            update={
+                "evidence_validated": False,
+                "evidence_validation_note": (
+                    f"{len(hollow)} of {len(verdict.issues)} issue(s) are missing a "
+                    "real node/metric or a substantive root_cause/description — "
+                    "evidence isn't fully grounded."
+                ),
+            }
+        )
+
+    return verdict.model_copy(update={"evidence_validated": True})
+
+
 async def analyze_take(
     *,
     take_id: str,
@@ -36,4 +88,5 @@ async def analyze_take(
         conversation_title=f"{take_id} — Technical Director",
     )
     verdict = parse_output(TechnicalVerdict, raw_text)
-    return verdict.model_copy(update={"model_tier_used": model_tier})
+    verdict = verdict.model_copy(update={"model_tier_used": model_tier})
+    return _validate_evidence_grounding(verdict)

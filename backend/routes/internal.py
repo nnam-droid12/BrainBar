@@ -9,12 +9,14 @@ import asyncio
 import base64
 import csv
 import logging
+import time
 from pathlib import Path
 
 from fastapi import APIRouter
 
-from agents.first_ad.act import act
+from agents.first_ad.act import act, react_to_hardware_failure
 from agents.narration import synthesize_verdict_audio
+from agents.schemas import ActionLog
 from agents.sigil_client import rate_take_conversation
 from agents.supervisor.orchestrate import handle_cut
 from backend.state import state
@@ -38,6 +40,24 @@ _COVERAGE_TYPES = _load_coverage_types()
 # Tracks per-take runtime facts the webhook events reveal incrementally.
 _fault_armed_by_take: dict[str, str | None] = {}
 _node_down_by_take: dict[str, str | None] = {}
+_scene_setup_by_take: dict[str, tuple[str, str]] = {}
+
+# Event-driven concurrency: a hardware failure gets First AD's immediate reaction
+# (incident/alert/page/drain) the instant node_down fires, running concurrently with
+# handle_cut's slower creative/technical analysis of the same take rather than
+# sequenced behind it — see agents/first_ad/act.py's react_to_hardware_failure. Keyed
+# by take_id so _on_cut can await the matching task before its own First AD call.
+_hardware_reaction_tasks: dict[str, asyncio.Task[ActionLog]] = {}
+
+# Tiered routing: a cheap, deterministic dedup gate before the model is touched at
+# all. If the same physical node already got a full hardware-reaction call within
+# this window, firing a second one adds real cost (a whole Gemini call) and would
+# re-page on-call for zero new information — checked with a plain dict lookup, no
+# tokens spent, before react_to_hardware_failure is ever invoked. 5 minutes
+# comfortably covers "the same failure re-reported" without silencing a genuinely
+# new failure on that node later in a long shoot day.
+_RECENT_HARDWARE_REACTION_WINDOW_SECONDS = 300.0
+_last_hardware_reaction_at: dict[str, float] = {}
 
 # Keeps strong references to in-flight background pipeline tasks so they aren't
 # garbage-collected mid-run (see asyncio docs on create_task); pruned on completion.
@@ -95,14 +115,43 @@ async def _on_slate(payload: dict) -> None:
     state.start_take(take_id, payload["scene"], payload["setup"], payload["take"])
     _fault_armed_by_take[take_id] = payload.get("fault_armed")
     _node_down_by_take[take_id] = None
+    _scene_setup_by_take[take_id] = (str(payload["scene"]), str(payload["setup"]))
     await manager.broadcast("slate", payload)
 
 
 async def _on_node_down(payload: dict) -> None:
     take_id = payload["take_id"]
-    _node_down_by_take[take_id] = payload["node"]
-    state.active_incident = {"node": payload["node"], "take_id": take_id, "status": "detected"}
+    node = payload["node"]
+    _node_down_by_take[take_id] = node
+    state.active_incident = {"node": node, "take_id": take_id, "status": "detected"}
     await manager.broadcast("node_down", payload)
+
+    now = time.monotonic()
+    last_reaction = _last_hardware_reaction_at.get(node)
+    if last_reaction is not None and (now - last_reaction) < _RECENT_HARDWARE_REACTION_WINDOW_SECONDS:
+        _log.info(
+            "node_down for %s (take=%s) is %.0fs after its last hardware reaction — "
+            "skipping a redundant model call, already being handled",
+            node,
+            take_id,
+            now - last_reaction,
+        )
+        return
+    _last_hardware_reaction_at[node] = now
+
+    # Fire-and-forget, concurrently with whatever cut pipeline is or isn't running yet
+    # for this take — a dead render node doesn't wait on a creative verdict to get
+    # drained. _on_cut awaits this exact task (by take_id) before its own First AD
+    # call, so the result is never lost even though nothing here blocks on it.
+    scene, setup_id = _scene_setup_by_take.get(take_id, ("", ""))
+    task = asyncio.create_task(
+        react_to_hardware_failure(
+            take_id=take_id, scene=scene, setup_id=setup_id, node=node, node_ids=NODE_IDS
+        )
+    )
+    _hardware_reaction_tasks[take_id] = task
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
 
 
 async def _on_cut(payload: dict) -> None:
@@ -155,6 +204,26 @@ async def _on_cut(payload: dict) -> None:
     _background_tasks.add(narration_task)
     narration_task.add_done_callback(_background_tasks.discard)
 
+    # If a node went down this take, react_to_hardware_failure was already fired
+    # concurrently from _on_node_down — pick up its result here (awaiting it only
+    # blocks if it's genuinely still running, which given it does far less work than
+    # the creative/technical analysis above should rarely if ever be the case) rather
+    # than let First AD's verdict-time call repeat an incident/alert/page/drain it
+    # already issued for the same node.
+    hardware_action_log: ActionLog | None = None
+    hardware_task = _hardware_reaction_tasks.pop(take_id, None)
+    if hardware_task is not None:
+        try:
+            hardware_action_log = await hardware_task
+        except Exception:
+            _log.exception("hardware reaction task failed for take_id=%s", take_id)
+
+    # A node counts as already handled either because this take's own reaction task
+    # just ran, or because the dedup gate in _on_node_down skipped firing a new one —
+    # that gate only skips when the node was already reacted to recently, so either
+    # way Mode B must not repeat it.
+    handled_node = node_down if (hardware_action_log is not None or node_down in _last_hardware_reaction_at) else None
+
     action_log = await act(
         verdict=verdict,
         start_timecode=start_timecode,
@@ -163,7 +232,12 @@ async def _on_cut(payload: dict) -> None:
         end_time_utc=end_time_utc,
         node_ids=NODE_IDS,
         node_down=node_down,
+        already_handled_node=handled_node,
     )
+    if hardware_action_log is not None:
+        action_log = action_log.model_copy(
+            update={"actions": hardware_action_log.actions + action_log.actions}
+        )
     state.set_action_log(take_id, action_log)
     if node_down:
         state.active_incident = {
