@@ -6,6 +6,7 @@ file needs to touch it.
 """
 from __future__ import annotations
 
+import logging
 import re
 import uuid
 from datetime import datetime, timezone
@@ -30,6 +31,8 @@ from agents.observability import (
 )
 from agents.profiling import init_profiling
 from agents.sigil_client import get_sigil_client
+
+_log = logging.getLogger(__name__)
 
 init_observability()
 # Must run after init_observability(): it attaches a span processor to the global
@@ -101,18 +104,24 @@ class _SigilToolPlugin(BasePlugin):
     ) -> dict | None:
         from sigil_sdk import ToolExecutionStart
 
-        rec = self._client.start_tool_execution(
-            ToolExecutionStart(
-                tool_name=tool.name,
-                conversation_id=self._conversation_id,
-                agent_name=self._agent_name,
-                agent_version=config.brainbar_version,
-                request_model=self._model,
-                request_provider="google",
-                include_content=True,
+        try:
+            rec = self._client.start_tool_execution(
+                ToolExecutionStart(
+                    tool_name=tool.name,
+                    conversation_id=self._conversation_id,
+                    agent_name=self._agent_name,
+                    agent_version=config.brainbar_version,
+                    request_model=self._model,
+                    request_provider="google",
+                    include_content=True,
+                )
             )
-        )
-        self._active[id(tool_context)] = (rec, tool_args)
+            self._active[id(tool_context)] = (rec, tool_args)
+            _log.debug("Sigil: started tool execution %s (conversation=%s)", tool.name, self._conversation_id)
+        except Exception:
+            # Never let a Sigil (third-party, public-preview) hiccup break an actual
+            # tool call — this plugin is pure telemetry, it must not be load-bearing.
+            _log.exception("Sigil: start_tool_execution failed for %s (non-fatal)", tool.name)
         return None
 
     async def after_tool_callback(
@@ -124,7 +133,11 @@ class _SigilToolPlugin(BasePlugin):
         if entry is None:
             return None
         rec, args = entry
-        rec.set_result(ToolExecutionEnd(arguments=args, result=result))
+        try:
+            rec.set_result(ToolExecutionEnd(arguments=args, result=result))
+            _log.debug("Sigil: recorded tool result for %s", tool.name)
+        except Exception:
+            _log.exception("Sigil: set_result failed for %s (non-fatal)", tool.name)
         return None
 
     async def on_tool_error_callback(
@@ -133,7 +146,10 @@ class _SigilToolPlugin(BasePlugin):
         entry = self._active.pop(id(tool_context), None)
         if entry is not None:
             rec, _args = entry
-            rec.set_exec_error(error)
+            try:
+                rec.set_exec_error(error)
+            except Exception:
+                _log.exception("Sigil: set_exec_error failed for %s (non-fatal)", tool.name)
         return None
 
 
@@ -191,22 +207,29 @@ async def run_single_turn(
     if sigil_client is not None:
         from sigil_sdk import GenerationStart, ModelRef
 
-        sigil_gen = sigil_client.start_streaming_generation(
-            GenerationStart(
-                conversation_id=conv_id,
-                conversation_title=conversation_title,
-                user_id=user_id,
-                agent_name=agent.name,
-                # Without an explicit agent_version, Agent Observability derives one
-                # from the system prompt and won't create a new version on a tool
-                # change — confirmed live via the app's own version-tracking notice.
-                # config.brainbar_version is the same value already tagged on the raw
-                # OTel export (agents/observability.py) and Pyroscope (agents/profiling.py).
-                agent_version=config.brainbar_version,
-                model=ModelRef(provider="google", name=model),
-                system_prompt=getattr(agent, "instruction", "") or "",
+        try:
+            sigil_gen = sigil_client.start_streaming_generation(
+                GenerationStart(
+                    conversation_id=conv_id,
+                    conversation_title=conversation_title,
+                    user_id=user_id,
+                    agent_name=agent.name,
+                    # Without an explicit agent_version, Agent Observability derives
+                    # one from the system prompt and won't create a new version on a
+                    # tool change — confirmed live via the app's own version-tracking
+                    # notice. config.brainbar_version is the same value already tagged
+                    # on the raw OTel export and Pyroscope profiling.
+                    agent_version=config.brainbar_version,
+                    model=ModelRef(provider="google", name=model),
+                    system_prompt=getattr(agent, "instruction", "") or "",
+                )
             )
-        )
+            _log.debug("Sigil: started generation for conversation=%s agent=%s", conv_id, agent.name)
+        except Exception:
+            # Same rule as the tool plugin: Sigil is pure telemetry, a failure here
+            # must never stop the actual agent turn from running.
+            _log.exception("Sigil: start_streaming_generation failed (non-fatal)")
+            sigil_gen = None
 
     final_text = ""
     tool_calls: list[str] = []
@@ -222,7 +245,10 @@ async def run_single_turn(
                     event.content and event.content.parts and any(p.text for p in event.content.parts)
                 )
                 if has_text:
-                    sigil_gen.set_first_token_at(datetime.now(timezone.utc))
+                    try:
+                        sigil_gen.set_first_token_at(datetime.now(timezone.utc))
+                    except Exception:
+                        _log.exception("Sigil: set_first_token_at failed (non-fatal)")
                     first_token_recorded = True
             if event.get_function_calls():
                 tool_calls.extend(call.name for call in event.get_function_calls())
@@ -235,15 +261,25 @@ async def run_single_turn(
         if match:
             record_hallucinated_tool_call(agent=agent.name, attempted_tool=match.group(1))
         if sigil_gen is not None:
-            sigil_gen.set_call_error(exc)
+            try:
+                sigil_gen.set_call_error(exc)
+            except Exception:
+                _log.exception("Sigil: set_call_error failed (non-fatal)")
         raise
     except Exception as exc:
         if sigil_gen is not None:
-            sigil_gen.set_call_error(exc)
+            try:
+                sigil_gen.set_call_error(exc)
+            except Exception:
+                _log.exception("Sigil: set_call_error failed (non-fatal)")
         raise
     else:
         if sigil_gen is not None:
-            sigil_gen.set_result()
+            try:
+                sigil_gen.set_result()
+                _log.debug("Sigil: recorded generation result for conversation=%s", conv_id)
+            except Exception:
+                _log.exception("Sigil: set_result failed (non-fatal)")
 
     return final_text, tool_calls
 
