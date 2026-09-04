@@ -18,6 +18,7 @@ from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.adk.tools.base_tool import BaseTool
 from google.adk.tools.tool_context import ToolContext
+from google.auth.exceptions import TransportError as AuthTransportError
 from google.genai import types
 from google.genai.errors import ClientError
 from pydantic import BaseModel
@@ -46,16 +47,24 @@ T = TypeVar("T", bound=BaseModel)
 
 def _is_transient(exc: BaseException) -> bool:
     # 429 RESOURCE_EXHAUSTED (quota) and 5xx are worth retrying; 400s are not.
-    return isinstance(exc, ClientError) and (
-        exc.code == 429 or (exc.code is not None and exc.code >= 500)
-    )
+    if isinstance(exc, ClientError):
+        return exc.code == 429 or (exc.code is not None and exc.code >= 500)
+    # google.auth's own transport layer (token refresh, the underlying connection
+    # Vertex AI calls ride on) raises this separately from ClientError — confirmed
+    # live: "Connection aborted... Remote end closed connection without response"
+    # mid-take, three times in one run. A dropped/reset connection is exactly the
+    # kind of thing that succeeds on retry, unlike a real 4xx from the API itself.
+    return isinstance(exc, AuthTransportError)
 
 
 def _record_transient_error(retry_state: RetryCallState) -> None:
-    """tenacity before_sleep hook: fires once per retried (transient) attempt, so this
-    is the live signal agents/supervisor/quota_check.py reads back through Grafana MCP
-    to detect Pro-tier quota exhaustion before routing another take to Pro — instead of
-    only finding out from the manual force_flash_only override in agents/config.py.
+    """tenacity before_sleep hook: fires once per retried (transient) attempt — quota
+    errors (ClientError 429) are the live signal agents/supervisor/quota_check.py reads
+    back through Grafana MCP to detect Pro-tier quota exhaustion before routing another
+    take to Pro, instead of only finding out from the manual force_flash_only override
+    in agents/config.py. Non-quota transient errors (a dropped connection) still get
+    recorded here (code=None) — background noise for that specific check, not a false
+    positive, since it filters on code="429" specifically.
     """
     exc = retry_state.outcome.exception() if retry_state.outcome else None
     if exc is None:
