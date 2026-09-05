@@ -7,6 +7,17 @@ steps:
       - -t
       - us-central1-docker.pkg.dev/$PROJECT_ID/brainbar/mcp-server
       - .
+  # Cloud Build's top-level `images:` field only pushes after every step in the
+  # build has already succeeded — a later step in the SAME build (the deploy step
+  # below) can never reference the image just built by an earlier step in that same
+  # run; it would only ever see whatever was pushed by a PRIOR build. Confirmed live
+  # on this exact service's first-ever deploy: "Image ... not found", since no prior
+  # build had ever pushed anything to this path. An explicit push here, before the
+  # deploy step runs, is what actually makes this build's own image the one deployed.
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - us-central1-docker.pkg.dev/$PROJECT_ID/brainbar/mcp-server
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
     entrypoint: gcloud
     args:
