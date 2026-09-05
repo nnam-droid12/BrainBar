@@ -15,6 +15,17 @@
 
 **Live:** [brainbar-frontend-854441956422.us-central1.run.app](https://brainbar-frontend-854441956422.us-central1.run.app)
 
+### Spin-up for judges (no local setup needed)
+
+1. Open the live link above.
+2. Click **Run demo scenario** on the Production Wall — 3 scripted takes roll live
+   against the real, deployed crew and a real Grafana Cloud stack.
+3. Switch to the **Crew Wall** tab to watch cost, latency, and model routing update
+   live as each take lands.
+
+All 4 services (frontend, backend, stage simulator, and BrainBar's own MCP server)
+are deployed and verified live — see [Cloud Deployment](#cloud-deployment).
+
 ---
 
 ## Table of Contents
@@ -264,7 +275,10 @@ degraded-but-safe. Worth doing before this server is reachable by anyone outside
 crew itself.
 
 Run it locally with `python -m agents.mcp_server` (streamable-HTTP transport on
-`:8000`, same transport the Grafana MCP server itself uses).
+`:8000`, same transport the Grafana MCP server itself uses). **Deployed and live**
+at `brainbar-mcp-server` on Cloud Run (see [Cloud Deployment](#cloud-deployment)) —
+IAM-protected, so not directly browsable, but a real, running service, not a
+local-only demo path.
 
 ## The Take Pipeline
 
@@ -641,12 +655,18 @@ Per-service detail: [`simulator/README.md`](simulator/README.md),
 | Backend API | https://brainbar-backend-854441956422.us-central1.run.app |
 | Stage Simulator | https://brainbar-simulator-854441956422.us-central1.run.app |
 | Grafana MCP service | Cloud Run, IAM-protected, not public; agents authenticate with a Google ID token (`agents/mcp_client.py`) |
+| BrainBar's own MCP server | Cloud Run, IAM-protected, not public; Model Armor-guarded (see [BrainBar as an MCP Server](#brainbar-as-an-mcp-server)) |
 | Supervisor (Agent Engine) | `projects/854441956422/locations/us-central1/reasoningEngines/940312789434499072` |
 
 Redeploy any Cloud Run service with its `deploy/cloud-run/*/cloudbuild.yaml` and
 `gcloud run deploy`. Redeploy the Supervisor with `python deploy/agent-engine/deploy.py`.
 Every push to `main` also triggers each service's own Cloud Build pipeline
 automatically.
+
+**Verified live, not just documented:** a real take rolled against the deployed
+backend above produced a real annotation in Grafana Cloud and real Tempo traces
+naming the actual tool calls — `grafana_query_prometheus`, `grafana_query_loki_logs`,
+`grafana_get_annotations`, and others — from the live, deployed crew, not local dev.
 
 ## Project Structure
 
