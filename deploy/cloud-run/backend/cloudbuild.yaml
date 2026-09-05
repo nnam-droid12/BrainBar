@@ -36,8 +36,16 @@ steps:
       - --cpu=1
       - --memory=1Gi
       - --concurrency=80
-      - --set-env-vars=GOOGLE_CLOUD_PROJECT=$PROJECT_ID,GOOGLE_CLOUD_LOCATION=us-central1,GOOGLE_GENAI_USE_VERTEXAI=true,GRAFANA_MCP_MODE=oss,GRAFANA_MCP_URL=https://brainbar-grafana-mcp-854441956422.us-central1.run.app/mcp,GRAFANA_CLOUD_STACK_URL=https://sincerechowder2500.grafana.net,OTLP_ENDPOINT=https://otlp-gateway-prod-eu-central-0.grafana.net/otlp,OTLP_INSTANCE_ID=1771008,SIMULATOR_BASE_URL=https://brainbar-simulator-854441956422.us-central1.run.app
-      - --set-secrets=GRAFANA_SERVICE_ACCOUNT_TOKEN=brainbar-grafana-sa-token:latest
+      # OTLP_API_KEY/SIGIL_* were missing here entirely before this fix — confirmed
+      # live: real take, real Grafana MCP tool calls (a real annotation landed in
+      # Grafana Cloud), but zero traces in Tempo, because agents/observability.py's
+      # init_observability() bails out silently without both OTLP_INSTANCE_ID and
+      # OTLP_API_KEY set (only the former was configured). Same gap for Sigil/Agent
+      # Observability. The actual crew behavior (Grafana MCP calls) was never
+      # affected — those run on GRAFANA_SERVICE_ACCOUNT_TOKEN, a separate credential
+      # — only the crew's OWN self-observability was silently dark in production.
+      - --set-env-vars=GOOGLE_CLOUD_PROJECT=$PROJECT_ID,GOOGLE_CLOUD_LOCATION=us-central1,GOOGLE_GENAI_USE_VERTEXAI=true,GRAFANA_MCP_MODE=oss,GRAFANA_MCP_URL=https://brainbar-grafana-mcp-854441956422.us-central1.run.app/mcp,GRAFANA_CLOUD_STACK_URL=https://sincerechowder2500.grafana.net,OTLP_ENDPOINT=https://otlp-gateway-prod-eu-central-0.grafana.net/otlp,OTLP_INSTANCE_ID=1771008,SIGIL_ENDPOINT=https://agento11y-prod-eu-central-0.grafana.net,SIGIL_INSTANCE_ID=1771008,SIMULATOR_BASE_URL=https://brainbar-simulator-854441956422.us-central1.run.app
+      - --set-secrets=GRAFANA_SERVICE_ACCOUNT_TOKEN=brainbar-grafana-sa-token:latest,OTLP_API_KEY=brainbar-otlp-api-key:latest,SIGIL_API_KEY=brainbar-sigil-api-key:latest
       - --quiet
 images:
   - us-central1-docker.pkg.dev/$PROJECT_ID/brainbar/backend
