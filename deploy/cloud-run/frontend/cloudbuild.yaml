@@ -13,6 +13,13 @@ steps:
       - -t
       - us-central1-docker.pkg.dev/$PROJECT_ID/brainbar/frontend
       - .
+  # See backend/cloudbuild.yaml's comment on this same step: the images: field below
+  # only pushes after the whole build succeeds, so without an explicit push here the
+  # deploy step would always run one build behind.
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - us-central1-docker.pkg.dev/$PROJECT_ID/brainbar/frontend
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
     entrypoint: gcloud
     args:

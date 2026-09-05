@@ -7,6 +7,18 @@ steps:
       - -t
       - us-central1-docker.pkg.dev/$PROJECT_ID/brainbar/backend
       - .
+  # Cloud Build's top-level images: field only pushes after every step in the build
+  # has already succeeded — a later step in this same run (the deploy below) can
+  # never reference the image an earlier step in that same run just built, only
+  # whatever a prior build already pushed. Every deploy before this fix was one
+  # commit stale: it always redeployed the previous build's image, then pushed the
+  # new one afterward for the next run to (mis)use the same way. An explicit push
+  # here, before the deploy step runs, is what makes this build's own image the one
+  # actually deployed.
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - us-central1-docker.pkg.dev/$PROJECT_ID/brainbar/backend
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
     entrypoint: gcloud
     args:
