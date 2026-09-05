@@ -67,6 +67,15 @@ class AgentsConfig(BaseSettings):
 
     ai_observability_enabled: bool = True
 
+    # --- Model Armor (agents/model_armor_client.py) ---
+    # Guards agents/mcp_server.py's public tool surface: caller-supplied strings
+    # (take_id, scene, setup_id) get interpolated into an LLM prompt downstream, and
+    # this server is reachable by callers BrainBar doesn't control. Template is a
+    # one-time gcloud/Console resource, not something this code creates — see the
+    # README's Model Armor section.
+    model_armor_template: str = ""
+    model_armor_location: str = ""
+
     # --- Agent Observability (Sigil) ---
     # A distinct product surface from the OTLP_* fields above: conversations, per-tool
     # traces, and evaluations in Grafana Cloud's native AI Observability app, rather

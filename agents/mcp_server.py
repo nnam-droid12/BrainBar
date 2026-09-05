@@ -26,6 +26,7 @@ from mcp.server.fastmcp import FastMCP
 
 from agents.config import config
 from agents.continuity.analyze import analyze_take as analyze_take_creative
+from agents.model_armor_client import check_caller_text
 from agents.schemas import ModelTier
 from agents.technical_director.analyze import analyze_take as analyze_take_technical
 
@@ -70,6 +71,10 @@ async def diagnose_take_technical(
         end_time_utc: Real RFC3339 end time — used as the actual Grafana query bound.
         node_ids: Render node ids active during the take, e.g. ["node-1", "node-2"].
     """
+    await check_caller_text(
+        f"take_id={take_id} scene={scene} setup_id={setup_id} node_ids={node_ids}",
+        context="diagnose_take_technical",
+    )
     verdict = await analyze_take_technical(
         take_id=take_id,
         scene=scene,
@@ -108,6 +113,10 @@ async def diagnose_take_creative(
         start_time_utc: Real RFC3339 start time — used as the actual Grafana query bound.
         end_time_utc: Real RFC3339 end time — used as the actual Grafana query bound.
     """
+    await check_caller_text(
+        f"take_id={take_id} scene={scene} setup_id={setup_id}",
+        context="diagnose_take_creative",
+    )
     verdict = await analyze_take_creative(
         take_id=take_id,
         scene=scene,

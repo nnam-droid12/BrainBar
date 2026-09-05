@@ -11,7 +11,7 @@
 
 **Category:** Live agents, Grafana Cloud integration, autonomous multi-agent orchestration
 
-**Built with:** Google Agent Development Kit (ADK), Gemini 2.5 Pro/Flash, Gemini Live API, Grafana Cloud (Mimir, Loki, Tempo, MCP server, Machine Learning, Sift, Pyroscope, Incident Response and Management), Vertex AI RAG Engine, Document AI, Agent Engine, Cloud Run, BigQuery, Cloud Storage
+**Built with:** Google Agent Development Kit (ADK), Gemini 2.5 Pro/Flash, Gemini Live API, Grafana Cloud (Mimir, Loki, Tempo, MCP server, Machine Learning, Sift, Pyroscope, Incident Response and Management), Vertex AI RAG Engine, Document AI, Agent Engine, Model Armor, Cloud Run, BigQuery, Cloud Storage
 
 **Live:** [brainbar-frontend-854441956422.us-central1.run.app](https://brainbar-frontend-854441956422.us-central1.run.app)
 
@@ -226,6 +226,39 @@ control, so `agents/mcp_server.py` runs as its own Cloud Run service
 (`deploy/cloud-run/mcp-server/`), IAM-protected rather than public, the same pattern
 already used for the Grafana MCP proxy this crew itself authenticates to with a Google
 ID token (see [`agents/mcp_client.py`](agents/mcp_client.py)).
+
+**Input safety — Model Armor.** IAM answers "is the caller who they say they are," not
+"is what they sent safe to hand a model." `take_id`/`scene`/`setup_id` here come
+straight from an external caller and get interpolated into an LLM prompt the same way
+BrainBar's own internal ones do, so [`agents/model_armor_client.py`](agents/model_armor_client.py)
+screens them with Google Cloud [Model Armor](https://docs.cloud.google.com/security-command-center/docs/model-armor-overview)
+before either tool ever calls `analyze_take`. A match (prompt injection, jailbreak)
+rejects the call outright — the caller gets a tool error, never a verdict computed
+from a manipulated input. If Model Armor's own call fails or can't complete, this
+fails closed (rejects), not open, since this is a security control, not telemetry.
+
+Setup (a one-time, billable GCP resource this repo's code deliberately doesn't create
+on its own):
+
+1. Enable the Model Armor API on the project, then create a template scoped to
+   prompt-injection/jailbreak detection:
+   ```bash
+   gcloud model-armor templates create brainbar-mcp-guard \
+     --location=us-central1 \
+     --pi-and-jailbreak-filter-settings-enforcement=enabled \
+     --pi-and-jailbreak-filter-settings-confidence-level=medium-and-above
+   ```
+2. Grant the Cloud Run service's runtime identity `roles/modelarmor.user` on the
+   project (least-privilege — this only needs to call `sanitize_user_prompt`, never
+   create or edit templates).
+3. Set `MODEL_ARMOR_TEMPLATE=projects/<project-id>/locations/us-central1/templates/brainbar-mcp-guard`
+   and `MODEL_ARMOR_LOCATION=us-central1` in `.env` (or the Cloud Run service's env vars).
+
+Without these set, `agents/mcp_server.py` still runs — this degrades to a logged
+warning rather than a hard failure so local dev never needs the template — but a real
+deployment without it means the public tool surface is running unguarded, not
+degraded-but-safe. Worth doing before this server is reachable by anyone outside the
+crew itself.
 
 Run it locally with `python -m agents.mcp_server` (streamable-HTTP transport on
 `:8000`, same transport the Grafana MCP server itself uses).
@@ -516,6 +549,7 @@ machine can't fix what it found.
 | Telemetry Emission | OpenTelemetry (metrics, logs, traces, GenAI semantic conventions) |
 | Storage and Analytics | Cloud Storage, BigQuery |
 | Secrets | Secret Manager |
+| Input safety | Model Armor (guards the public MCP server's tool inputs) |
 | Deployment | Cloud Run (4 services), Agent Engine (Supervisor), Cloud Build |
 
 ## Local Setup

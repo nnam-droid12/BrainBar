@@ -34,3 +34,6 @@ tenacity==9.1.4
 # docstring for the Windows-dev-machine caveat; unaffected on the Cloud Run (Linux) image.
 pyroscope-io==1.2.1
 pyroscope-otel>=1.0.1
+# Guards agents/mcp_server.py's public tool surface (agents/model_armor_client.py)
+# against prompt injection in caller-supplied take_id/scene/setup_id strings.
+google-cloud-modelarmor==0.7.1
