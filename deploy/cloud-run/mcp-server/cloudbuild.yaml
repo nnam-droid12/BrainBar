@@ -31,8 +31,12 @@ steps:
       # package. Sigil/OTLP telemetry is intentionally left unset here, same as it
       # is for that service today: agents/sigil_client.py and agents/observability.py
       # both already degrade to a no-op without those credentials, and this server's
-      # own diagnostic tools don't depend on them to function.
-      - --set-env-vars=GOOGLE_CLOUD_PROJECT=$PROJECT_ID,GOOGLE_CLOUD_LOCATION=us-central1,GOOGLE_GENAI_USE_VERTEXAI=true,GRAFANA_MCP_MODE=oss,GRAFANA_MCP_URL=https://brainbar-grafana-mcp-854441956422.us-central1.run.app/mcp,GRAFANA_CLOUD_STACK_URL=https://sincerechowder2500.grafana.net,OTLP_ENDPOINT=https://otlp-gateway-prod-eu-central-0.grafana.net/otlp,OTLP_INSTANCE_ID=1771008
+      # own diagnostic tools don't depend on them to function. MODEL_ARMOR_* is not
+      # optional the same way — this is the one Cloud Run service whose tool inputs
+      # come from a caller outside this crew's control (see agents/model_armor_client.py
+      # and the README's Model Armor section); leaving it unset means the guard is
+      # off, not degraded-but-safe.
+      - --set-env-vars=GOOGLE_CLOUD_PROJECT=$PROJECT_ID,GOOGLE_CLOUD_LOCATION=us-central1,GOOGLE_GENAI_USE_VERTEXAI=true,GRAFANA_MCP_MODE=oss,GRAFANA_MCP_URL=https://brainbar-grafana-mcp-854441956422.us-central1.run.app/mcp,GRAFANA_CLOUD_STACK_URL=https://sincerechowder2500.grafana.net,OTLP_ENDPOINT=https://otlp-gateway-prod-eu-central-0.grafana.net/otlp,OTLP_INSTANCE_ID=1771008,MODEL_ARMOR_TEMPLATE=projects/$PROJECT_ID/locations/us/templates/brainbar-mcp-guard,MODEL_ARMOR_LOCATION=us
       - --set-secrets=GRAFANA_SERVICE_ACCOUNT_TOKEN=brainbar-grafana-sa-token:latest
       - --quiet
 images:
