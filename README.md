@@ -48,11 +48,11 @@ makes this expensive is not the failure everyone watches for.
 
 | # | Failure Pattern | Why It Is Expensive |
 |---|---|---|
-| 1 | **Invisible technical damage.** A render node drops frames on a hard camera move, genlock drifts, tracking jitters, or VRAM spikes during an effects cue, and the take looks perfect in the viewfinder while quietly being broken. | The damage surfaces weeks later in the 4K deliverable, when a reshoot means rebooking the volume, the cast, and the crew. |
-| 2 | **GPU VRAM exhaustion.** Industry-wide, VRAM ceilings are the single most common cause of render-farm job failure, more than compute or network. | BrainBar's own stage telemetry tracks `brainbar_node_vram_percent` per node for exactly this reason. |
-| 3 | **Data and coordination sprawl.** A single day on an LED volume generates terabytes of plate media, tracking data, and renders, moved across disconnected asset, review, and security systems. | Nobody on set has one place to ask "what actually happened on this take, technically and creatively, right now." |
-| 4 | **Institutional amnesia.** The same node fails the same way on a later shoot day because nobody wrote down the pattern, or wrote it somewhere nobody checks before rolling the next take. | A postmortem that lives in a doc nobody reopens is not a playbook, it is an archive. |
-| 5 | **Monitoring without action.** A dashboard can show a spike. It cannot pre-stage a corrective take, open an incident, silence an alert storm, or page the person who needs to know right now. | Watching is not the same as responding, and on a $500,000 day, the gap between the two is expensive. |
+| 1 | **Invisible technical damage.** A render node drops frames on a hard camera move, genlock drifts, tracking jitters, or VRAM spikes during an effects cue, and the take looks perfect in the viewfinder while quietly being broken. | Nobody catches it on the day. It surfaces weeks later in the 4K deliverable, and by then a reshoot means rebooking the volume, the cast, and the crew. |
+| 2 | **GPU VRAM exhaustion.** Industry-wide, VRAM ceilings are the single most common cause of render-farm job failure, more than compute or network. | It's specific and preventable, which is exactly why BrainBar's own stage telemetry tracks `brainbar_node_vram_percent` per node. |
+| 3 | **Data and coordination sprawl.** A single day on an LED volume generates terabytes of plate media, tracking data, and renders, moved across disconnected asset, review, and security systems. | Nobody on set has one place to ask what actually happened on this take, technically and creatively, right now. |
+| 4 | **Institutional amnesia.** The same node fails the same way on a later shoot day, because whoever noticed the first time wrote it down somewhere nobody checks before rolling the next take. | An archive nobody reopens isn't a playbook. |
+| 5 | **Monitoring without action.** A dashboard can show a spike. It can't pre-stage a corrective take, open an incident, silence an alert storm, or page the person who needs to know right now. | On a $500,000 day, the gap between watching and responding is where the money goes. |
 
 ## The Solution
 
@@ -65,13 +65,13 @@ that exact take window, and takes real action on what it finds.
 |---|---|
 | **Per-take verdict** | Circle, hold, reshoot, or fixable-in-post, synthesized from independent technical and creative analysis, with cited evidence, never a vague "something looked off." |
 | **Real action, not a report** | Pre-stages the corrective take, opens and drives Grafana incidents on hardware failure, silences alert storms, annotates dashboards, and pages a real human on-call. |
-| **Predictive failure prevention** | Reads a Grafana Machine Learning VRAM forecast and pre-emptively load-sheds a node before it actually exhausts, not after. |
-| **A live, self-written playbook** | Searches its own crew's past verdict annotations in Grafana before diagnosing a new fault. Institutional memory that lives in the same stack it queries, not a document nobody reopens. |
-| **A second opinion from Grafana's own AI** | Checks for and reconciles with any Grafana Sift investigation overlapping the take window, agreeing or disagreeing explicitly rather than restating it. |
-| **Code-level self-diagnosis** | The crew's own process is continuously profiled with Grafana Cloud Pyroscope and linked to its own OpenTelemetry traces, so a slow step opens straight into a flamegraph. |
-| **Cost governance on set** | Every agent's real token cost is estimated in dollars and shown live, not buried as a raw token count nobody on set can size up at a glance. |
+| **Predictive failure prevention** | Acts on a Grafana ML VRAM forecast before a node exhausts, not after ([detail](#predictive-vram-forecasting-with-grafana-ml)). |
+| **A live, self-written playbook** | Searches its own crew's past verdict annotations before diagnosing a new fault — the playbook is the stack it already queries. |
+| **A second opinion from Grafana's own AI** | Reconciles with any Grafana Sift investigation overlapping the take, agreeing or disagreeing explicitly ([detail](#sift-as-a-second-opinion)). |
+| **Code-level self-diagnosis** | The crew's own process is profiled with Grafana Cloud Pyroscope and linked to its own traces, so a slow step opens straight into a flamegraph. |
+| **Cost governance on set** | Every agent's real token cost is estimated in dollars, live, not a raw token count nobody on set can eyeball. |
 | **Technical dailies** | A per-shot package with a Grafana deep-link for every take, delivered to editorial at wrap. |
-| **The crew watches itself** | Its own Gemini call latency, token cost, and MCP tool activity flow into the same Grafana Cloud stack it queries, and the Supervisor reads that data back before every take to stay inside an on-set latency budget and to detect its own recent quota errors before routing to a model tier likely to fail. |
+| **The crew watches itself** | Its own latency, cost, and tool activity land in the same stack it queries — the Supervisor checks that data before every take, to stay inside budget and to catch its own recent quota errors before routing to a model tier likely to fail. |
 
 ## Architectural Diagram
 
@@ -115,18 +115,18 @@ Most take-review tooling stops at a dashboard. BrainBar's five agents act on wha
 dashboard shows, and several of the ways they do it are not the obvious use of Grafana
 Cloud.
 
-| Feature | What It Does | Why It Is Not The Obvious Choice |
+| Feature | What It Does | The Detail Worth Knowing |
 |---|---|---|
-| **Predictive VRAM forecasting** | First AD reads a Grafana Machine Learning forecast on `brainbar_node_vram_percent` every take, and pre-emptively load-sheds a node forecast to cross the critical threshold soon, before the next take rolls. | Reactive alerting on VRAM is the obvious move. Forecasting the specific metric that causes the most real-world render-farm failures, and acting on the forecast rather than the breach, is not. |
-| **Sift as a second, independent opinion** | Technical Director checks for an existing Grafana Sift investigation overlapping the take window and explicitly reconciles with it, agreeing or disagreeing in its own summary. | The Grafana MCP server exposes tools to read a Sift investigation but none to start one. Most integrations would either ignore Sift entirely or fabricate a tool call that does not exist. BrainBar consults Grafana's own AI as a second opinion instead of pretending it can trigger one on demand. |
-| **Continuous profiling with Pyroscope** | The crew's own process is profiled and linked to its own OpenTelemetry traces, so a slow step in Grafana Explore opens straight into a flamegraph. | Metrics, logs, and traces establish that something was slow. Profiling establishes why, at the function level, which almost no hackathon-scale agent project reaches for. |
-| **Annotation history as a live playbook** | Technical Director searches its own crew's past verdict annotations before diagnosing a new fault, and cites precedent explicitly when it finds a match. | A static runbook file goes stale. Every past take's annotation already lives in the same Grafana Cloud stack being queried, so the playbook writes and updates itself. |
-| **Real on-call paging, not just an incident** | On a hardware failure, First AD pages a real escalation chain through Grafana Cloud Incident Response and Management, grouped by node so repeats do not re-page on every occurrence. | Opening an incident is the obvious action. Paging the person who actually needs to act on it, with the discipline to group repeats instead of flooding them, is the harder and more useful one. |
-| **Hallucination and quota self-governance** | The crew's own tool-call errors and 429 quota errors are exported as Grafana metrics, and the Supervisor reads them back before routing a take to a stronger model, downgrading automatically if recent errors suggest it will fail anyway. | Most agent demos treat reliability as someone else's problem. BrainBar's own past incident, an agent hallucinating a tool name that did not exist, is the reason this exists: it is a fix earned from a real failure, exported as a real Grafana signal, not a hypothetical safeguard. |
-| **Bidirectional MCP: BrainBar is also a server** | Every agent above is an MCP *client* of Grafana. `agents/mcp_server.py` is the other direction: BrainBar's own diagnosis exposed as MCP tools any external caller can invoke directly, deployed as its own IAM-protected Cloud Run service. | Almost every MCP integration only calls out. Once an agent's reasoning already sits behind a bounded, structured interface, exposing that same interface to the outside world is a few dozen lines, not a second product, and it is what turns a chat feature into infrastructure other agents can build on. |
-| **Hardware failures get reacted to in parallel, not in a queue** | When a render node dies mid-take, First AD's incident/drain/page response fires the instant the event arrives, running concurrently with the slower creative and technical analysis of the same take rather than waiting behind it. | The obvious architecture is one pipeline: analyze, then act. A dead node does not care what the creative verdict says, and waiting on a verdict that can take over a minute under load before draining a node that is actively failing is a real, measured latency bug, not a hypothetical one. |
-| **A dict lookup before a dead node ever reaches a model** | Before First AD's hardware-reaction call is even made, a plain in-memory check asks whether this exact node already triggered a reaction in the last 5 minutes. If it has, the call — a full Gemini invocation, plus a real page to a human — never happens a second time. | The instinct is to make the model smarter about deduplicating. The cheaper, more reliable fix is to never let it see the redundant case at all: a node that keeps flapping should not burn a model call or a human's on-call page on the same failure twice, and a lookup that costs nothing catches that before either one happens. |
-| **One evidence bar, no matter which model answers** | A single function checks that a not-clean verdict's cited issues are real (a real node, a real metric, a substantive root cause), applied identically whether Technical Director ran on Flash or Pro. | The easy version of a model fallback quietly ships whatever the cheaper model produces. Routing this through one shared check, called from one place, makes it structurally impossible for a quota-driven downgrade to lower the bar without anyone noticing. |
+| **Predictive VRAM forecasting** | First AD reads a Grafana Machine Learning forecast on `brainbar_node_vram_percent` every take and pre-emptively load-sheds a node forecast to cross the critical threshold, before the next take rolls, not after. | VRAM exhaustion is the single most common real-world cause of render-farm failure. Most tooling alerts once it happens; this one acts on where the trend line is headed. |
+| **Sift as a second, independent opinion** | Technical Director checks for an existing Grafana Sift investigation overlapping the take window and explicitly reconciles with it in its own summary. | The Grafana MCP server can read a Sift investigation but has no tool to start one. Rather than fabricate a call that doesn't exist, BrainBar treats Sift as a second opinion to consult, not a button to press. |
+| **Continuous profiling with Pyroscope** | The crew's own process is profiled and linked to its own OpenTelemetry traces, so a slow step in Grafana Explore opens straight into a flamegraph. | Metrics and traces tell you something was slow. This tells you why, at the function level — a depth of self-observability most agent projects never reach for. |
+| **Annotation history as a live playbook** | Technical Director searches its own crew's past verdict annotations before diagnosing a new fault, and cites precedent when it finds a match. | The playbook is the same Grafana stack being queried anyway, so it writes and updates itself instead of going stale in a doc. |
+| **Real on-call paging, not just an incident** | On a hardware failure, First AD pages a real escalation chain through Grafana Cloud IRM, grouped by node so repeats don't re-page on every occurrence. | Opening an incident is easy. Reaching the specific person who needs to act, without flooding them on a flapping node, is the part that actually matters. |
+| **Hallucination and quota self-governance** | The crew's own tool-call errors and 429 quota errors export as Grafana metrics, and the Supervisor reads them back before routing to a stronger model. | This exists because of a real incident: an agent once hallucinated a tool name that didn't exist. The fix became a permanent signal instead of a one-off patch. |
+| **Bidirectional MCP — BrainBar is also a server** | `agents/mcp_server.py` exposes the crew's own diagnosis as MCP tools any external caller can invoke directly, as its own IAM-protected Cloud Run service. See [BrainBar as an MCP Server](#brainbar-as-an-mcp-server). | |
+| **Hardware failures get reacted to in parallel** | First AD's incident/drain/page response fires the instant a node dies, running alongside the slower creative and technical analysis rather than waiting behind it. | A dead node doesn't care what the creative verdict says, and under load that analysis can take over a minute — a real latency cost, not a hypothetical one. |
+| **A dict lookup before a dead node ever reaches a model** | A plain in-memory check runs before First AD's hardware-reaction call: has this exact node already triggered a reaction in the last 5 minutes? If so, nothing fires a second time. | Cheaper and more reliable than teaching the model to notice it's repeating itself — a flapping node shouldn't cost a second Gemini call or a second page to a human. |
+| **One evidence bar, no matter which model answers** | A shared function checks that a not-clean verdict's cited issues are real — a real node, a real metric, a substantive root cause — applied identically whether Flash or Pro produced it. | A quota-driven fallback to a cheaper model can't quietly lower the bar, because there's only one bar and one place that checks it. |
 
 ## Architecture
 
@@ -302,8 +302,8 @@ exact import or call site.
 ### Predictive VRAM forecasting with Grafana ML
 
 `brainbar_node_vram_percent` is already alerted on reactively at a 90 percent
-threshold (`simulator/grafana_provisioning/alert_rules.py`). This adds a forecast so
-First AD can act before that threshold is crossed, not after.
+threshold (`simulator/grafana_provisioning/alert_rules.py`). Setup for the forecast
+this reads:
 
 1. In the Grafana Cloud stack: Administration, AI and Machine Learning, Metric
    Forecasts, New Forecast.
@@ -492,13 +492,14 @@ fabricating a plausible-sounding finding.
   (`scripts/list_vertex_models.md`), since a model ID from documentation alone is not
   reliable across every Vertex AI project's allowlist.
 
-### GitLab-equivalent integration depth, applied to Grafana
+### Why the Grafana integration runs this deep
 
-Where a code-review agent would integrate deeply with a Git host, BrainBar integrates
-deeply with Grafana Cloud instead: querying Mimir, Loki, and Tempo, writing incidents,
-annotations, and alert-silencing changes back, reading Grafana's own AI (Sift) and
-Grafana's own forecasting (Machine Learning) as inputs to its own decisions, and paging
-a human through Grafana's own on-call product when a machine cannot fix what it found.
+Most agent projects treat an observability platform as a place to send logs. BrainBar
+treats Grafana Cloud as the crew's actual working environment: it queries Mimir, Loki,
+and Tempo, writes incidents, annotations, and alert-silencing changes back, reads
+Grafana's own AI (Sift) and Grafana's own forecasting (Machine Learning) as inputs to
+its own decisions, and pages a human through Grafana's own on-call product when a
+machine can't fix what it found.
 
 ## Tech Stack
 
