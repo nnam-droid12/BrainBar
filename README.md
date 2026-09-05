@@ -241,18 +241,21 @@ Setup (a one-time, billable GCP resource this repo's code deliberately doesn't c
 on its own):
 
 1. Enable the Model Armor API on the project, then create a template scoped to
-   prompt-injection/jailbreak detection:
+   prompt-injection/jailbreak detection. `--location` takes a multi-region value
+   (`us` or `eu`), not a granular region like `us-central1` — confirmed live, the
+   granular form fails with a misleading `PERMISSION_DENIED` rather than a clear
+   "invalid location" error, even with Owner-level access:
    ```bash
    gcloud model-armor templates create brainbar-mcp-guard \
-     --location=us-central1 \
+     --location=us \
      --pi-and-jailbreak-filter-settings-enforcement=enabled \
      --pi-and-jailbreak-filter-settings-confidence-level=medium-and-above
    ```
 2. Grant the Cloud Run service's runtime identity `roles/modelarmor.user` on the
    project (least-privilege — this only needs to call `sanitize_user_prompt`, never
    create or edit templates).
-3. Set `MODEL_ARMOR_TEMPLATE=projects/<project-id>/locations/us-central1/templates/brainbar-mcp-guard`
-   and `MODEL_ARMOR_LOCATION=us-central1` in `.env` (or the Cloud Run service's env vars).
+3. Set `MODEL_ARMOR_TEMPLATE=projects/<project-id>/locations/us/templates/brainbar-mcp-guard`
+   and `MODEL_ARMOR_LOCATION=us` in `.env` (or the Cloud Run service's env vars).
 
 Without these set, `agents/mcp_server.py` still runs — this degrades to a logged
 warning rather than a hard failure so local dev never needs the template — but a real
